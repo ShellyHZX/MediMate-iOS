@@ -8,8 +8,19 @@ struct MediMateApp: App {
     init() {
         let persistenceController = PersistenceController.shared
         let medicationRepository = CoreDataMedicationRepository(context: persistenceController.viewContext)
+        let scheduledDoseRepository = CoreDataScheduledDoseRepository(context: persistenceController.viewContext)
+        let calendar = Calendar.autoupdatingCurrent
         let reviewMedicationsUseCase = ReviewMedicationsUseCase(medicationRepository: medicationRepository)
         let addMedicationUseCase = AddMedicationUseCase(medicationRepository: medicationRepository)
+        let scheduleMedicationUseCase = ScheduleMedicationUseCase(
+            scheduledDoseRepository: scheduledDoseRepository,
+            calendar: calendar
+        )
+        let addMedicationAndScheduleUseCase = AddMedicationAndScheduleUseCase(
+            addMedicationUseCase: addMedicationUseCase,
+            scheduleMedicationUseCase: scheduleMedicationUseCase,
+            calendar: calendar
+        )
         let updateMedicationUseCase = UpdateMedicationUseCase(medicationRepository: medicationRepository)
         let deactivateMedicationUseCase = DeactivateMedicationUseCase(medicationRepository: medicationRepository)
 
@@ -17,7 +28,7 @@ struct MediMateApp: App {
         _medicationManagementDependencies = StateObject(
             wrappedValue: MedicationManagementDependencies(
                 reviewMedicationsUseCase: reviewMedicationsUseCase,
-                addMedicationUseCase: addMedicationUseCase,
+                addMedicationAndScheduleUseCase: addMedicationAndScheduleUseCase,
                 updateMedicationUseCase: updateMedicationUseCase,
                 deactivateMedicationUseCase: deactivateMedicationUseCase
             )

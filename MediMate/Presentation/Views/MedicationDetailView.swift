@@ -67,7 +67,7 @@ struct MedicationDetailView: View {
                     MedicationFormView(
                         viewModel: MedicationFormViewModel(
                             mode: .edit(medication),
-                            addMedicationUseCase: dependencies.addMedicationUseCase,
+                            addMedicationAndScheduleUseCase: dependencies.addMedicationAndScheduleUseCase,
                             updateMedicationUseCase: dependencies.updateMedicationUseCase,
                             deactivateMedicationUseCase: dependencies.deactivateMedicationUseCase
                         )

@@ -75,12 +75,14 @@ struct MedicationFormViewModelAddTests {
         #expect(viewModel.errorMessage == nil)
     }
 
-    @Test func validAddFormSavesThroughAddUseCase() async throws {
+    @Test func validAddFormSavesThroughAddAndScheduleUseCase() async throws {
         let repository = MockMedicationRepository()
+        let scheduledDoseRepository = MockScheduledDoseRepository()
         let medicationID = uuid("00000000-0000-0000-0000-000000005101")
         let createdAt = TestDates.date(2026, 3, 1, 9, 0)
         let viewModel = makeAddFormViewModel(
             repository: repository,
+            scheduledDoseRepository: scheduledDoseRepository,
             uuidFactory: { medicationID },
             dateFactory: { createdAt }
         )
@@ -96,6 +98,7 @@ struct MedicationFormViewModelAddTests {
         #expect(medication.createdAt == createdAt)
         #expect(medication.name == "Vitamin D")
         #expect(repository.savedMedications == [medication])
+        #expect(scheduledDoseRepository.batchSavedScheduledDoses.first?.allSatisfy { $0.medicationID == medicationID } == true)
         #expect(viewModel.savedMedication == medication)
         #expect(!viewModel.isSaving)
     }
@@ -148,6 +151,23 @@ struct MedicationFormViewModelAddTests {
 
         #expect(medication == nil)
         #expect(viewModel.errorMessage == "We couldn't save this medication. Please try again.")
+        #expect(!viewModel.isSaving)
+    }
+
+    @Test func schedulingFailureShowsPartialFailureMessage() async throws {
+        let repository = MockMedicationRepository()
+        let scheduledDoseRepository = MockScheduledDoseRepository()
+        scheduledDoseRepository.saveScheduledDosesError = MockScheduledDoseRepositoryError.requestedFailure
+        let viewModel = try makeValidAddFormViewModel(
+            repository: repository,
+            scheduledDoseRepository: scheduledDoseRepository
+        )
+
+        let medication = await viewModel.save()
+
+        #expect(medication == nil)
+        #expect(repository.savedMedications.count == 1)
+        #expect(viewModel.errorMessage == "The medication was saved, but its upcoming doses couldn't be prepared. Please try again.")
         #expect(!viewModel.isSaving)
     }
 }
@@ -338,15 +358,28 @@ private func makeListViewModel(repository: MockMedicationRepository) -> Medicati
 @MainActor
 private func makeAddFormViewModel(
     repository: MockMedicationRepository,
+    scheduledDoseRepository: MockScheduledDoseRepository = MockScheduledDoseRepository(),
     uuidFactory: @escaping () -> UUID = { uuid("00000000-0000-0000-0000-000000005999") },
-    dateFactory: @escaping () -> Date = { TestDates.date(2026, 3, 1, 9, 0) }
+    dateFactory: @escaping () -> Date = { TestDates.date(2026, 3, 1, 9, 0) },
+    referenceDateProvider: @escaping () -> Date = { TestDates.date(2026, 3, 1, 12, 0) }
 ) -> MedicationFormViewModel {
-    MedicationFormViewModel(
+    let addMedicationUseCase = AddMedicationUseCase(
+        medicationRepository: repository,
+        uuidFactory: uuidFactory,
+        dateFactory: dateFactory
+    )
+    let scheduleMedicationUseCase = ScheduleMedicationUseCase(
+        scheduledDoseRepository: scheduledDoseRepository,
+        calendar: TestDates.calendar
+    )
+
+    return MedicationFormViewModel(
         mode: .add,
-        addMedicationUseCase: AddMedicationUseCase(
-            medicationRepository: repository,
-            uuidFactory: uuidFactory,
-            dateFactory: dateFactory
+        addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase(
+            addMedicationUseCase: addMedicationUseCase,
+            scheduleMedicationUseCase: scheduleMedicationUseCase,
+            calendar: TestDates.calendar,
+            referenceDateProvider: referenceDateProvider
         ),
         updateMedicationUseCase: UpdateMedicationUseCase(medicationRepository: repository),
         deactivateMedicationUseCase: DeactivateMedicationUseCase(medicationRepository: repository)
@@ -354,8 +387,14 @@ private func makeAddFormViewModel(
 }
 
 @MainActor
-private func makeValidAddFormViewModel(repository: MockMedicationRepository) throws -> MedicationFormViewModel {
-    let viewModel = makeAddFormViewModel(repository: repository)
+private func makeValidAddFormViewModel(
+    repository: MockMedicationRepository,
+    scheduledDoseRepository: MockScheduledDoseRepository = MockScheduledDoseRepository()
+) throws -> MedicationFormViewModel {
+    let viewModel = makeAddFormViewModel(
+        repository: repository,
+        scheduledDoseRepository: scheduledDoseRepository
+    )
     viewModel.name = "Vitamin D"
     viewModel.dosageAmountText = "1"
     viewModel.dosageUnit = .tablet
@@ -368,9 +407,19 @@ private func makeEditFormViewModel(
     repository: MockMedicationRepository,
     medication: Medication
 ) -> MedicationFormViewModel {
-    MedicationFormViewModel(
+    let addMedicationUseCase = AddMedicationUseCase(medicationRepository: repository)
+    let scheduleMedicationUseCase = ScheduleMedicationUseCase(
+        scheduledDoseRepository: MockScheduledDoseRepository(),
+        calendar: TestDates.calendar
+    )
+
+    return MedicationFormViewModel(
         mode: .edit(medication),
-        addMedicationUseCase: AddMedicationUseCase(medicationRepository: repository),
+        addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase(
+            addMedicationUseCase: addMedicationUseCase,
+            scheduleMedicationUseCase: scheduleMedicationUseCase,
+            calendar: TestDates.calendar
+        ),
         updateMedicationUseCase: UpdateMedicationUseCase(medicationRepository: repository),
         deactivateMedicationUseCase: DeactivateMedicationUseCase(medicationRepository: repository)
     )

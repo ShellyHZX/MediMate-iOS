@@ -4,18 +4,18 @@ import Foundation
 @MainActor
 final class MedicationManagementDependencies: ObservableObject {
     let reviewMedicationsUseCase: ReviewMedicationsUseCase
-    let addMedicationUseCase: AddMedicationUseCase
+    let addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase
     let updateMedicationUseCase: UpdateMedicationUseCase
     let deactivateMedicationUseCase: DeactivateMedicationUseCase
 
     init(
         reviewMedicationsUseCase: ReviewMedicationsUseCase,
-        addMedicationUseCase: AddMedicationUseCase,
+        addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase,
         updateMedicationUseCase: UpdateMedicationUseCase,
         deactivateMedicationUseCase: DeactivateMedicationUseCase
     ) {
         self.reviewMedicationsUseCase = reviewMedicationsUseCase
-        self.addMedicationUseCase = addMedicationUseCase
+        self.addMedicationAndScheduleUseCase = addMedicationAndScheduleUseCase
         self.updateMedicationUseCase = updateMedicationUseCase
         self.deactivateMedicationUseCase = deactivateMedicationUseCase
     }
