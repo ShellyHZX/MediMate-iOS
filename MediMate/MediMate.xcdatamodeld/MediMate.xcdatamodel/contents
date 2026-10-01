@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="2630" systemVersion="25D125" minimumToolsVersion="Xcode 9.0" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="DoseTimeEntity" representedClassName="DoseTimeEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="hour" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="minute" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="medication" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="MedicationEntity" inverseName="doseTimes" inverseEntity="MedicationEntity"/>
+    </entity>
+    <entity name="MedicationEntity" representedClassName="MedicationEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dosageAmount" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
+        <attribute name="dosageUnit" optional="NO" attributeType="String"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="instructions" optional="YES" attributeType="String"/>
+        <attribute name="isActive" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="name" optional="NO" attributeType="String"/>
+        <relationship name="doseTimes" optional="NO" toMany="YES" minCount="0" deletionRule="Cascade" destinationEntity="DoseTimeEntity" inverseName="medication" inverseEntity="DoseTimeEntity"/>
+        <relationship name="scheduledDoses" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ScheduledDoseEntity" inverseName="medication" inverseEntity="ScheduledDoseEntity"/>
+    </entity>
+    <entity name="ScheduledDoseEntity" representedClassName="ScheduledDoseEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="dosageAmount" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
+        <attribute name="dosageUnit" optional="NO" attributeType="String"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="medicationName" optional="NO" attributeType="String"/>
+        <attribute name="scheduledAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="status" optional="NO" attributeType="String"/>
+        <attribute name="takenAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="medication" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="MedicationEntity" inverseName="scheduledDoses" inverseEntity="MedicationEntity"/>
+    </entity>
+    <elements>
+        <element name="MedicationEntity" positionX="-63" positionY="-18" width="128" height="149"/>
+        <element name="DoseTimeEntity" positionX="-270" positionY="45" width="128" height="89"/>
+        <element name="ScheduledDoseEntity" positionX="153" positionY="27" width="128" height="134"/>
+    </elements>
+</model>
