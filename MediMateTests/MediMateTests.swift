@@ -1,10 +1,3 @@
-//
-//  MediMateTests.swift
-//  MediMateTests
-//
-//  Created by 黃子玹 on 2026/10/1.
-//
-
 import Testing
 @testable import MediMate
 
