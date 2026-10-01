@@ -21,6 +21,7 @@
         <attribute name="dosageAmount" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
         <attribute name="dosageUnit" optional="NO" attributeType="String"/>
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="medicationID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="medicationName" optional="NO" attributeType="String"/>
         <attribute name="scheduledAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="status" optional="NO" attributeType="String"/>
