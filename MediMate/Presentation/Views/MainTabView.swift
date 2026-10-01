@@ -5,14 +5,10 @@ struct MainTabView: View {
 
     var body: some View {
         TabView {
-            PlaceholderTabView(
-                title: "Today",
-                systemImage: "sun.max",
-                message: "Today’s medication routine will appear here."
-            )
-            .tabItem {
-                Label("Today", systemImage: "sun.max")
-            }
+            TodayTabView(reviewTodaysMedicationUseCase: dependencies.reviewTodaysMedicationUseCase)
+                .tabItem {
+                    Label("Today", systemImage: "sun.max")
+                }
 
             MedicationTabView(reviewMedicationsUseCase: dependencies.reviewMedicationsUseCase)
                 .tabItem {
