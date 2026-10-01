@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MedicationListView: View {
     @ObservedObject var viewModel: MedicationListViewModel
+    @EnvironmentObject private var dependencies: MedicationManagementDependencies
 
     var body: some View {
         Group {
@@ -20,7 +21,7 @@ struct MedicationListView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink {
-                    MedicationFormPlaceholderView(mode: .add)
+                    addMedicationForm
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -58,7 +59,11 @@ struct MedicationListView: View {
                 Section("Active") {
                     ForEach(viewModel.activeMedications) { medication in
                         NavigationLink {
-                            MedicationDetailView(medication: medication)
+                            MedicationDetailView(medication: medication) {
+                                Task {
+                                    await viewModel.loadMedications()
+                                }
+                            }
                         } label: {
                             MedicationRowView(medication: medication)
                         }
@@ -70,7 +75,11 @@ struct MedicationListView: View {
                 Section("Inactive") {
                     ForEach(viewModel.inactiveMedications) { medication in
                         NavigationLink {
-                            MedicationDetailView(medication: medication)
+                            MedicationDetailView(medication: medication) {
+                                Task {
+                                    await viewModel.loadMedications()
+                                }
+                            }
                         } label: {
                             MedicationRowView(medication: medication)
                         }
@@ -94,7 +103,7 @@ struct MedicationListView: View {
             Text("Add your medications to keep track of when each dose is due.")
         } actions: {
             NavigationLink("Add Medication") {
-                MedicationFormPlaceholderView(mode: .add)
+                addMedicationForm
             }
             .buttonStyle(.borderedProminent)
         }
@@ -112,6 +121,21 @@ struct MedicationListView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
+        }
+    }
+
+    private var addMedicationForm: some View {
+        MedicationFormView(
+            viewModel: MedicationFormViewModel(
+                mode: .add,
+                addMedicationUseCase: dependencies.addMedicationUseCase,
+                updateMedicationUseCase: dependencies.updateMedicationUseCase,
+                deactivateMedicationUseCase: dependencies.deactivateMedicationUseCase
+            )
+        ) { _ in
+            Task {
+                await viewModel.loadMedications()
+            }
         }
     }
 }

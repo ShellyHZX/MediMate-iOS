@@ -1,7 +1,19 @@
 import SwiftUI
 
 struct MedicationDetailView: View {
-    let medication: Medication
+    @EnvironmentObject private var dependencies: MedicationManagementDependencies
+    @Environment(\.dismiss) private var dismiss
+    @State private var medication: Medication
+
+    private let onMedicationChanged: () -> Void
+
+    init(
+        medication: Medication,
+        onMedicationChanged: @escaping () -> Void = { }
+    ) {
+        _medication = State(initialValue: medication)
+        self.onMedicationChanged = onMedicationChanged
+    }
 
     var body: some View {
         List {
@@ -52,7 +64,25 @@ struct MedicationDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink("Edit") {
-                    MedicationFormPlaceholderView(mode: .edit(medication))
+                    MedicationFormView(
+                        viewModel: MedicationFormViewModel(
+                            mode: .edit(medication),
+                            addMedicationUseCase: dependencies.addMedicationUseCase,
+                            updateMedicationUseCase: dependencies.updateMedicationUseCase,
+                            deactivateMedicationUseCase: dependencies.deactivateMedicationUseCase
+                        )
+                    ) { completion in
+                        switch completion {
+                        case .saved(let updatedMedication):
+                            medication = updatedMedication
+                            onMedicationChanged()
+
+                        case .deactivated(let updatedMedication):
+                            medication = updatedMedication
+                            onMedicationChanged()
+                            dismiss()
+                        }
+                    }
                 }
                 .accessibilityLabel("Edit Medication")
             }
