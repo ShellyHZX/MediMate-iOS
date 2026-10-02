@@ -59,7 +59,7 @@ struct UpdateMedicationAndRescheduleUseCase {
 
         do {
             existingDoses = try await scheduledDoseRepository.fetchScheduledDoses(
-                from: referenceDate,
+                from: horizonStart,
                 to: horizonEnd
             )
         } catch {
@@ -81,7 +81,7 @@ struct UpdateMedicationAndRescheduleUseCase {
         do {
             let scheduledDoses = try await scheduleMedicationUseCase.execute(
                 medication: medication,
-                startDate: referenceDate,
+                startDate: horizonStart,
                 endDate: horizonEnd,
                 excludingScheduledInstants: Set(finalizedDoses.map(\.scheduledAt))
             )

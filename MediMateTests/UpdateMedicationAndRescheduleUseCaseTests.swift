@@ -28,22 +28,79 @@ struct UpdateMedicationAndRescheduleUseCaseTests {
         #expect(result.scheduledDoses.contains { $0.scheduledAt == TestDates.date(2026, 6, 2, 9, 0) })
     }
 
-    @Test func pastScheduledDoseSnapshotsRemainUnchanged() async throws {
+    @Test func unresolvedEarlierTodayDoseIsReplacedAfterEdit() async throws {
         let environment = try makeEnvironment()
-        let pastDose = try makeDose(
+        let earlierTodayDose = try makeDose(
             id: uuid("00000000-0000-0000-0000-000000008201"),
             medicationID: environment.medication.id,
-            scheduledAt: TestDates.date(2026, 6, 1, 14, 0),
+            scheduledAt: TestDates.date(2026, 6, 1, 12, 0),
             status: .missed
         )
-        environment.scheduledDoseRepository.scheduledDoseByID[pastDose.id] = pastDose
-        environment.scheduledDoseRepository.scheduledDosesInRange = [pastDose]
+        environment.scheduledDoseRepository.scheduledDoseByID[earlierTodayDose.id] = earlierTodayDose
+        environment.scheduledDoseRepository.scheduledDosesInRange = [earlierTodayDose]
+        let input = try makeUpdateInput(medicationID: environment.medication.id, doseTimes: [(13, 0), (18, 0)])
+
+        let result = try await environment.useCase.execute(input: input, referenceDate: referenceDate)
+
+        #expect(environment.scheduledDoseRepository.deletedScheduledDoseIDs == [[earlierTodayDose.id]])
+        #expect(environment.scheduledDoseRepository.scheduledDoseByID[earlierTodayDose.id] == nil)
+        #expect(result.scheduledDoses.contains { $0.scheduledAt == TestDates.date(2026, 6, 1, 13, 0) })
+        #expect(result.scheduledDoses.contains { $0.scheduledAt == TestDates.date(2026, 6, 1, 18, 0) })
+    }
+
+    @Test func takenEarlierTodayDoseIsPreserved() async throws {
+        let environment = try makeEnvironment()
+        let takenDose = try makeDose(
+            id: uuid("00000000-0000-0000-0000-000000008202"),
+            medicationID: environment.medication.id,
+            scheduledAt: TestDates.date(2026, 6, 1, 12, 0),
+            status: .taken,
+            takenAt: TestDates.date(2026, 6, 1, 12, 5)
+        )
+        environment.scheduledDoseRepository.scheduledDoseByID[takenDose.id] = takenDose
+        environment.scheduledDoseRepository.scheduledDosesInRange = [takenDose]
+        let input = try makeUpdateInput(medicationID: environment.medication.id, doseTimes: [(13, 0)])
+
+        _ = try await environment.useCase.execute(input: input, referenceDate: referenceDate)
+
+        #expect(environment.scheduledDoseRepository.deletedScheduledDoseIDs == [[]])
+        #expect(environment.scheduledDoseRepository.scheduledDoseByID[takenDose.id] == takenDose)
+    }
+
+    @Test func skippedEarlierTodayDoseIsPreserved() async throws {
+        let environment = try makeEnvironment()
+        let skippedDose = try makeDose(
+            id: uuid("00000000-0000-0000-0000-000000008203"),
+            medicationID: environment.medication.id,
+            scheduledAt: TestDates.date(2026, 6, 1, 12, 0),
+            status: .skipped
+        )
+        environment.scheduledDoseRepository.scheduledDoseByID[skippedDose.id] = skippedDose
+        environment.scheduledDoseRepository.scheduledDosesInRange = [skippedDose]
+        let input = try makeUpdateInput(medicationID: environment.medication.id, doseTimes: [(13, 0)])
+
+        _ = try await environment.useCase.execute(input: input, referenceDate: referenceDate)
+
+        #expect(environment.scheduledDoseRepository.deletedScheduledDoseIDs == [[]])
+        #expect(environment.scheduledDoseRepository.scheduledDoseByID[skippedDose.id] == skippedDose)
+    }
+
+    @Test func yesterdayScheduledDoseSnapshotsRemainUnchanged() async throws {
+        let environment = try makeEnvironment()
+        let yesterdayDose = try makeDose(
+            id: uuid("00000000-0000-0000-0000-000000008204"),
+            medicationID: environment.medication.id,
+            scheduledAt: TestDates.date(2026, 5, 31, 23, 0),
+            status: .missed
+        )
+        environment.scheduledDoseRepository.scheduledDoseByID[yesterdayDose.id] = yesterdayDose
+        environment.scheduledDoseRepository.scheduledDosesInRange = [yesterdayDose]
         let input = try makeUpdateInput(medicationID: environment.medication.id, doseTimes: [(9, 0)])
 
         _ = try await environment.useCase.execute(input: input, referenceDate: referenceDate)
 
         #expect(environment.scheduledDoseRepository.deletedScheduledDoseIDs == [[]])
-        #expect(environment.scheduledDoseRepository.scheduledDoseByID[pastDose.id] == pastDose)
+        #expect(environment.scheduledDoseRepository.scheduledDoseByID[yesterdayDose.id] == yesterdayDose)
     }
 
     @Test func futureTakenDoseIsPreservedAndNotDuplicated() async throws {
@@ -176,8 +233,52 @@ struct UpdateMedicationAndRescheduleUseCaseTests {
             to: TestDates.calendar.startOfDay(for: referenceDate)
         ))
 
-        #expect(requestedRange.startDate == referenceDate)
+        #expect(requestedRange.startDate == TestDates.calendar.startOfDay(for: referenceDate))
         #expect(requestedRange.endDate == expectedEndDate)
+    }
+
+    @Test func regeneratedEarlierTodayOccurrenceCanLaterBeClassifiedAsDue() async throws {
+        let environment = try makeEnvironment()
+        let input = try makeUpdateInput(medicationID: environment.medication.id, doseTimes: [(13, 0)])
+
+        let result = try await environment.useCase.execute(input: input, referenceDate: referenceDate)
+        let earlierTodayDose = try #require(result.scheduledDoses.first {
+            $0.scheduledAt == TestDates.date(2026, 6, 1, 13, 0)
+        })
+
+        let todayRepository = MockScheduledDoseRepository()
+        todayRepository.scheduledDosesInRange = [earlierTodayDose]
+        let todayUseCase = ReviewTodaysMedicationUseCase(
+            scheduledDoseRepository: todayRepository,
+            calendar: TestDates.calendar
+        )
+
+        let summary = try await todayUseCase.execute(referenceDate: referenceDate)
+
+        #expect(summary.doses.first?.id == earlierTodayDose.id)
+        #expect(summary.doses.first?.status == .due)
+    }
+
+    @Test func finalizedEarlierTodayCollisionPreventsDuplicateGeneration() async throws {
+        let environment = try makeEnvironment()
+        let takenDose = try makeDose(
+            id: uuid("00000000-0000-0000-0000-000000008901"),
+            medicationID: environment.medication.id,
+            scheduledAt: TestDates.date(2026, 6, 1, 13, 0),
+            status: .taken,
+            takenAt: TestDates.date(2026, 6, 1, 13, 5)
+        )
+        environment.scheduledDoseRepository.scheduledDoseByID[takenDose.id] = takenDose
+        environment.scheduledDoseRepository.scheduledDosesInRange = [takenDose]
+        let input = try makeUpdateInput(medicationID: environment.medication.id, doseTimes: [(13, 0)])
+
+        let result = try await environment.useCase.execute(input: input, referenceDate: referenceDate)
+
+        let matchingDoses = environment.scheduledDoseRepository.scheduledDosesInRange.filter {
+            $0.scheduledAt == takenDose.scheduledAt && $0.medicationID == environment.medication.id
+        }
+        #expect(matchingDoses == [takenDose])
+        #expect(!result.scheduledDoses.contains { $0.scheduledAt == takenDose.scheduledAt })
     }
 
     private func makeEnvironment() throws -> UpdateMedicationAndRescheduleTestEnvironment {
