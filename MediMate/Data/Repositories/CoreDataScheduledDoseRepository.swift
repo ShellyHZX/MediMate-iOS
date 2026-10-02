@@ -79,6 +79,27 @@ struct CoreDataScheduledDoseRepository: ScheduledDoseRepository {
         }
     }
 
+    func deleteScheduledDoses(ids: [UUID]) async throws {
+        guard !ids.isEmpty else {
+            return
+        }
+
+        try await context.perform {
+            let request = ScheduledDoseEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "id IN %@", ids)
+
+            let scheduledDoseEntities = try context.fetch(request)
+
+            for scheduledDoseEntity in scheduledDoseEntities {
+                context.delete(scheduledDoseEntity)
+            }
+
+            if context.hasChanges {
+                try context.save()
+            }
+        }
+    }
+
     private func apply(_ scheduledDose: ScheduledDose, to scheduledDoseEntity: ScheduledDoseEntity) throws {
         scheduledDoseEntity.apply(scheduledDose)
         scheduledDoseEntity.medication = try fetchMedicationEntity(id: scheduledDose.medicationID)

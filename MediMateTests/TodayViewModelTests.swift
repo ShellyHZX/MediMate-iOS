@@ -134,16 +134,157 @@ struct TodayViewModelTests {
         #expect(repository.fetchedRangeRequests.first?.endDate == TestDates.date(2026, 5, 5, 0, 0))
     }
 
+    @Test func markingActionableDoseAsTakenPersistsAndReloadsToday() async throws {
+        let repository = MockScheduledDoseRepository()
+        let actionDate = TestDates.date(2026, 5, 4, 12, 5)
+        let dose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007501"),
+            scheduledAt: TestDates.date(2026, 5, 4, 8, 0),
+            status: .upcoming
+        )
+        repository.scheduledDoseByID[dose.id] = dose
+        repository.scheduledDosesInRange = [dose]
+        let viewModel = makeViewModel(repository: repository, actionDate: actionDate)
+
+        await viewModel.loadToday()
+        let loadedDose = try #require(viewModel.doses.first)
+        await viewModel.markDoseAsTaken(loadedDose)
+
+        #expect(repository.fetchedScheduledDoseIDs == [dose.id])
+        #expect(repository.savedScheduledDoses.first?.status == .taken)
+        #expect(repository.savedScheduledDoses.first?.takenAt == actionDate)
+        #expect(repository.fetchedRangeRequests.count == 2)
+        #expect(viewModel.doses.first?.status == .taken)
+        #expect(viewModel.completedCount == 1)
+        #expect(viewModel.actionInProgressDoseID == nil)
+        #expect(viewModel.actionErrorMessage == nil)
+    }
+
+    @Test func successfulTakenActionUpdatesCompletedCountAndPriorityDose() async throws {
+        let repository = MockScheduledDoseRepository()
+        let morningDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007601"),
+            scheduledAt: TestDates.date(2026, 5, 4, 8, 0),
+            status: .upcoming
+        )
+        let eveningDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007602"),
+            scheduledAt: TestDates.date(2026, 5, 4, 18, 0),
+            status: .upcoming
+        )
+        repository.scheduledDoseByID[morningDose.id] = morningDose
+        repository.scheduledDoseByID[eveningDose.id] = eveningDose
+        repository.scheduledDosesInRange = [morningDose, eveningDose]
+        let viewModel = makeViewModel(repository: repository)
+
+        await viewModel.loadToday()
+        let priorityDose = try #require(viewModel.priorityDose)
+        await viewModel.markDoseAsTaken(priorityDose)
+
+        #expect(viewModel.completedCount == 1)
+        #expect(viewModel.priorityDose?.id == eveningDose.id)
+    }
+
+    @Test func skippingActionableDosePersistsAndReloadsToday() async throws {
+        let repository = MockScheduledDoseRepository()
+        let dose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007701"),
+            scheduledAt: TestDates.date(2026, 5, 4, 8, 0),
+            status: .upcoming
+        )
+        repository.scheduledDoseByID[dose.id] = dose
+        repository.scheduledDosesInRange = [dose]
+        let viewModel = makeViewModel(repository: repository)
+
+        await viewModel.loadToday()
+        let loadedDose = try #require(viewModel.doses.first)
+        await viewModel.skipDose(loadedDose)
+
+        #expect(repository.fetchedScheduledDoseIDs == [dose.id])
+        #expect(repository.savedScheduledDoses.first?.status == .skipped)
+        #expect(repository.fetchedRangeRequests.count == 2)
+        #expect(viewModel.doses.first?.status == .skipped)
+        #expect(viewModel.completedCount == 0)
+        #expect(viewModel.actionInProgressDoseID == nil)
+    }
+
+    @Test func skippedDoseDoesNotIncreaseCompletedCountAndPriorityMovesForward() async throws {
+        let repository = MockScheduledDoseRepository()
+        let morningDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007801"),
+            scheduledAt: TestDates.date(2026, 5, 4, 8, 0),
+            status: .upcoming
+        )
+        let eveningDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007802"),
+            scheduledAt: TestDates.date(2026, 5, 4, 18, 0),
+            status: .upcoming
+        )
+        repository.scheduledDoseByID[morningDose.id] = morningDose
+        repository.scheduledDoseByID[eveningDose.id] = eveningDose
+        repository.scheduledDosesInRange = [morningDose, eveningDose]
+        let viewModel = makeViewModel(repository: repository)
+
+        await viewModel.loadToday()
+        let priorityDose = try #require(viewModel.priorityDose)
+        await viewModel.skipDose(priorityDose)
+
+        #expect(viewModel.completedCount == 0)
+        #expect(viewModel.priorityDose?.id == eveningDose.id)
+    }
+
+    @Test func actionErrorMapsToHumanFacingMessage() async throws {
+        let repository = MockScheduledDoseRepository()
+        let skippedDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007901"),
+            scheduledAt: TestDates.date(2026, 5, 4, 8, 0),
+            status: .skipped
+        )
+        repository.scheduledDoseByID[skippedDose.id] = skippedDose
+        let viewModel = makeViewModel(repository: repository)
+
+        await viewModel.markDoseAsTaken(skippedDose)
+
+        #expect(viewModel.actionErrorMessage == "This dose was already skipped.")
+        #expect(repository.savedScheduledDoses.isEmpty)
+        #expect(viewModel.actionInProgressDoseID == nil)
+    }
+
+    @Test func terminalDoseSkipErrorIsHandled() async throws {
+        let repository = MockScheduledDoseRepository()
+        let takenDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007A01"),
+            scheduledAt: TestDates.date(2026, 5, 4, 8, 0),
+            status: .taken
+        )
+        repository.scheduledDoseByID[takenDose.id] = takenDose
+        let viewModel = makeViewModel(repository: repository)
+
+        await viewModel.skipDose(takenDose)
+
+        #expect(viewModel.actionErrorMessage == "This dose is already marked as taken.")
+        #expect(repository.savedScheduledDoses.isEmpty)
+        #expect(viewModel.actionInProgressDoseID == nil)
+    }
+
     private func makeViewModel(
         repository: MockScheduledDoseRepository,
-        referenceDate: Date = TestDates.date(2026, 5, 4, 12, 0)
+        referenceDate: Date = TestDates.date(2026, 5, 4, 12, 0),
+        actionDate: Date = TestDates.date(2026, 5, 4, 12, 15)
     ) -> TodayViewModel {
         TodayViewModel(
             reviewTodaysMedicationUseCase: ReviewTodaysMedicationUseCase(
                 scheduledDoseRepository: repository,
                 calendar: TestDates.calendar
             ),
-            referenceDateProvider: { referenceDate }
+            recordDoseAsTakenUseCase: RecordDoseAsTakenUseCase(
+                scheduledDoseRepository: repository
+            ),
+            skipScheduledDoseUseCase: SkipScheduledDoseUseCase(
+                scheduledDoseRepository: repository
+            ),
+            referenceDateProvider: { referenceDate },
+            actionDateProvider: { actionDate }
         )
     }
 

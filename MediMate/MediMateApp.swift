@@ -14,6 +14,12 @@ struct MediMateApp: App {
             scheduledDoseRepository: scheduledDoseRepository,
             calendar: calendar
         )
+        let recordDoseAsTakenUseCase = RecordDoseAsTakenUseCase(
+            scheduledDoseRepository: scheduledDoseRepository
+        )
+        let skipScheduledDoseUseCase = SkipScheduledDoseUseCase(
+            scheduledDoseRepository: scheduledDoseRepository
+        )
         let reviewMedicationsUseCase = ReviewMedicationsUseCase(medicationRepository: medicationRepository)
         let addMedicationUseCase = AddMedicationUseCase(medicationRepository: medicationRepository)
         let scheduleMedicationUseCase = ScheduleMedicationUseCase(
@@ -26,15 +32,23 @@ struct MediMateApp: App {
             calendar: calendar
         )
         let updateMedicationUseCase = UpdateMedicationUseCase(medicationRepository: medicationRepository)
+        let updateMedicationAndRescheduleUseCase = UpdateMedicationAndRescheduleUseCase(
+            updateMedicationUseCase: updateMedicationUseCase,
+            scheduleMedicationUseCase: scheduleMedicationUseCase,
+            scheduledDoseRepository: scheduledDoseRepository,
+            calendar: calendar
+        )
         let deactivateMedicationUseCase = DeactivateMedicationUseCase(medicationRepository: medicationRepository)
 
         self.persistenceController = persistenceController
         _medicationManagementDependencies = StateObject(
             wrappedValue: MedicationManagementDependencies(
                 reviewTodaysMedicationUseCase: reviewTodaysMedicationUseCase,
+                recordDoseAsTakenUseCase: recordDoseAsTakenUseCase,
+                skipScheduledDoseUseCase: skipScheduledDoseUseCase,
                 reviewMedicationsUseCase: reviewMedicationsUseCase,
                 addMedicationAndScheduleUseCase: addMedicationAndScheduleUseCase,
-                updateMedicationUseCase: updateMedicationUseCase,
+                updateMedicationAndRescheduleUseCase: updateMedicationAndRescheduleUseCase,
                 deactivateMedicationUseCase: deactivateMedicationUseCase
             )
         )

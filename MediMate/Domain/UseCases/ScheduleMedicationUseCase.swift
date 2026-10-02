@@ -18,7 +18,8 @@ struct ScheduleMedicationUseCase {
     func execute(
         medication: Medication,
         startDate: Date,
-        endDate: Date
+        endDate: Date,
+        excludingScheduledInstants: Set<Date> = []
     ) async throws -> [ScheduledDose] {
         guard medication.isActive else {
             throw ScheduleMedicationUseCaseError.inactiveMedication
@@ -31,7 +32,8 @@ struct ScheduleMedicationUseCase {
         let scheduledDoses = generateScheduledDoses(
             medication: medication,
             startDate: startDate,
-            endDate: endDate
+            endDate: endDate,
+            excludingScheduledInstants: excludingScheduledInstants
         )
 
         do {
@@ -45,10 +47,11 @@ struct ScheduleMedicationUseCase {
     private func generateScheduledDoses(
         medication: Medication,
         startDate: Date,
-        endDate: Date
+        endDate: Date,
+        excludingScheduledInstants: Set<Date>
     ) -> [ScheduledDose] {
         var doses: [ScheduledDose] = []
-        var scheduledInstants = Set<Date>()
+        var scheduledInstants = excludingScheduledInstants
         var day = calendar.startOfDay(for: startDate)
 
         while day < endDate {

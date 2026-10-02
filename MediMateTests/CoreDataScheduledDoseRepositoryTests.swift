@@ -235,6 +235,32 @@ struct CoreDataScheduledDoseRepositoryTests {
         #expect(fetchedDoses.isEmpty)
     }
 
+    @Test func deleteScheduledDosesRemovesMatchingIDsAndIgnoresUnknownIDs() async throws {
+        let environment = makeEnvironment()
+        let deletedDose = try makeDose(
+            id: uuid("00000000-0000-0000-0000-000000002013"),
+            scheduledAt: TestDates.date(2026, 1, 10, 8, 0),
+            status: .upcoming
+        )
+        let keptDose = try makeDose(
+            id: uuid("00000000-0000-0000-0000-000000002014"),
+            scheduledAt: TestDates.date(2026, 1, 10, 20, 0),
+            status: .upcoming
+        )
+
+        try await environment.scheduledDoseRepository.saveScheduledDoses([deletedDose, keptDose])
+        try await environment.scheduledDoseRepository.deleteScheduledDoses(ids: [
+            deletedDose.id,
+            uuid("00000000-0000-0000-0000-000000002099")
+        ])
+
+        let deletedFetchResult = try await environment.scheduledDoseRepository.fetchScheduledDose(id: deletedDose.id)
+        let keptFetchResult = try await environment.scheduledDoseRepository.fetchScheduledDose(id: keptDose.id)
+
+        #expect(deletedFetchResult == nil)
+        #expect(keptFetchResult == keptDose)
+    }
+
     private func makeEnvironment() -> CoreDataScheduledDoseRepositoryTestEnvironment {
         let persistenceController = PersistenceController(inMemory: true)
         return CoreDataScheduledDoseRepositoryTestEnvironment(

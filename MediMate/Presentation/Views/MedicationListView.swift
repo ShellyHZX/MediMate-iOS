@@ -129,7 +129,7 @@ struct MedicationListView: View {
             viewModel: MedicationFormViewModel(
                 mode: .add,
                 addMedicationAndScheduleUseCase: dependencies.addMedicationAndScheduleUseCase,
-                updateMedicationUseCase: dependencies.updateMedicationUseCase,
+                updateMedicationAndRescheduleUseCase: dependencies.updateMedicationAndRescheduleUseCase,
                 deactivateMedicationUseCase: dependencies.deactivateMedicationUseCase
             )
         ) { _ in

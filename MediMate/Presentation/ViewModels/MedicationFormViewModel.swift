@@ -21,7 +21,7 @@ final class MedicationFormViewModel: ObservableObject {
     let mode: Mode
 
     private let addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase
-    private let updateMedicationUseCase: UpdateMedicationUseCase
+    private let updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase
     private let deactivateMedicationUseCase: DeactivateMedicationUseCase
 
     var isAddMode: Bool {
@@ -43,12 +43,12 @@ final class MedicationFormViewModel: ObservableObject {
     init(
         mode: Mode,
         addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase,
-        updateMedicationUseCase: UpdateMedicationUseCase,
+        updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase,
         deactivateMedicationUseCase: DeactivateMedicationUseCase
     ) {
         self.mode = mode
         self.addMedicationAndScheduleUseCase = addMedicationAndScheduleUseCase
-        self.updateMedicationUseCase = updateMedicationUseCase
+        self.updateMedicationAndRescheduleUseCase = updateMedicationAndRescheduleUseCase
         self.deactivateMedicationUseCase = deactivateMedicationUseCase
         self.isSaving = false
         self.errorMessage = nil
@@ -107,7 +107,7 @@ final class MedicationFormViewModel: ObservableObject {
                 medication = result.medication
 
             case .edit(let existingMedication):
-                medication = try await updateMedicationUseCase.execute(
+                let result = try await updateMedicationAndRescheduleUseCase.execute(
                     input: UpdateMedicationInput(
                         medicationID: existingMedication.id,
                         name: name,
@@ -117,11 +117,15 @@ final class MedicationFormViewModel: ObservableObject {
                         dailyDoseTimes: dailyDoseTimes
                     )
                 )
+                medication = result.medication
             }
 
             savedMedication = medication
             return medication
         } catch let error as AddMedicationAndScheduleUseCaseError {
+            errorMessage = mapError(error)
+            return nil
+        } catch let error as UpdateMedicationAndRescheduleUseCaseError {
             errorMessage = mapError(error)
             return nil
         } catch let error as UpdateMedicationUseCaseError {
@@ -230,6 +234,18 @@ final class MedicationFormViewModel: ObservableObject {
             return "Check the dose schedule and try again."
         case .persistenceFailure:
             return "We couldn't save this medication. Please try again."
+        }
+    }
+
+    private func mapError(_ error: UpdateMedicationAndRescheduleUseCaseError) -> String {
+        switch error {
+        case .medicationUpdateFailure(let updateMedicationError):
+            return mapError(updateMedicationError)
+        case .invalidSchedulingDateCalculation,
+             .fetchScheduledDosesFailure,
+             .deleteScheduledDosesFailure,
+             .scheduleGenerationFailure:
+            return "The medication was saved, but its upcoming doses couldn't be refreshed. Please try again."
         }
     }
 

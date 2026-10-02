@@ -5,7 +5,11 @@ struct MainTabView: View {
 
     var body: some View {
         TabView {
-            TodayTabView(reviewTodaysMedicationUseCase: dependencies.reviewTodaysMedicationUseCase)
+            TodayTabView(
+                reviewTodaysMedicationUseCase: dependencies.reviewTodaysMedicationUseCase,
+                recordDoseAsTakenUseCase: dependencies.recordDoseAsTakenUseCase,
+                skipScheduledDoseUseCase: dependencies.skipScheduledDoseUseCase
+            )
                 .tabItem {
                     Label("Today", systemImage: "sun.max")
                 }

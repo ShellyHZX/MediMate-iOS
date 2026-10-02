@@ -381,7 +381,13 @@ private func makeAddFormViewModel(
             calendar: TestDates.calendar,
             referenceDateProvider: referenceDateProvider
         ),
-        updateMedicationUseCase: UpdateMedicationUseCase(medicationRepository: repository),
+        updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase(
+            updateMedicationUseCase: UpdateMedicationUseCase(medicationRepository: repository),
+            scheduleMedicationUseCase: scheduleMedicationUseCase,
+            scheduledDoseRepository: scheduledDoseRepository,
+            calendar: TestDates.calendar,
+            referenceDateProvider: referenceDateProvider
+        ),
         deactivateMedicationUseCase: DeactivateMedicationUseCase(medicationRepository: repository)
     )
 }
@@ -407,9 +413,10 @@ private func makeEditFormViewModel(
     repository: MockMedicationRepository,
     medication: Medication
 ) -> MedicationFormViewModel {
+    let scheduledDoseRepository = MockScheduledDoseRepository()
     let addMedicationUseCase = AddMedicationUseCase(medicationRepository: repository)
     let scheduleMedicationUseCase = ScheduleMedicationUseCase(
-        scheduledDoseRepository: MockScheduledDoseRepository(),
+        scheduledDoseRepository: scheduledDoseRepository,
         calendar: TestDates.calendar
     )
 
@@ -420,7 +427,13 @@ private func makeEditFormViewModel(
             scheduleMedicationUseCase: scheduleMedicationUseCase,
             calendar: TestDates.calendar
         ),
-        updateMedicationUseCase: UpdateMedicationUseCase(medicationRepository: repository),
+        updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase(
+            updateMedicationUseCase: UpdateMedicationUseCase(medicationRepository: repository),
+            scheduleMedicationUseCase: scheduleMedicationUseCase,
+            scheduledDoseRepository: scheduledDoseRepository,
+            calendar: TestDates.calendar,
+            referenceDateProvider: { TestDates.date(2026, 3, 1, 12, 0) }
+        ),
         deactivateMedicationUseCase: DeactivateMedicationUseCase(medicationRepository: repository)
     )
 }
