@@ -8,7 +8,8 @@ struct MainTabView: View {
             TodayTabView(
                 reviewTodaysMedicationUseCase: dependencies.reviewTodaysMedicationUseCase,
                 recordDoseAsTakenUseCase: dependencies.recordDoseAsTakenUseCase,
-                skipScheduledDoseUseCase: dependencies.skipScheduledDoseUseCase
+                skipScheduledDoseUseCase: dependencies.skipScheduledDoseUseCase,
+                correctDoseRecordUseCase: dependencies.correctDoseRecordUseCase
             )
                 .tabItem {
                     Label("Today", systemImage: "sun.max")

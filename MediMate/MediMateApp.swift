@@ -20,6 +20,10 @@ struct MediMateApp: App {
         let skipScheduledDoseUseCase = SkipScheduledDoseUseCase(
             scheduledDoseRepository: scheduledDoseRepository
         )
+        let correctDoseRecordUseCase = CorrectDoseRecordUseCase(
+            scheduledDoseRepository: scheduledDoseRepository,
+            calendar: calendar
+        )
         let reviewMedicationsUseCase = ReviewMedicationsUseCase(medicationRepository: medicationRepository)
         let addMedicationUseCase = AddMedicationUseCase(medicationRepository: medicationRepository)
         let scheduleMedicationUseCase = ScheduleMedicationUseCase(
@@ -46,6 +50,7 @@ struct MediMateApp: App {
                 reviewTodaysMedicationUseCase: reviewTodaysMedicationUseCase,
                 recordDoseAsTakenUseCase: recordDoseAsTakenUseCase,
                 skipScheduledDoseUseCase: skipScheduledDoseUseCase,
+                correctDoseRecordUseCase: correctDoseRecordUseCase,
                 reviewMedicationsUseCase: reviewMedicationsUseCase,
                 addMedicationAndScheduleUseCase: addMedicationAndScheduleUseCase,
                 updateMedicationAndRescheduleUseCase: updateMedicationAndRescheduleUseCase,

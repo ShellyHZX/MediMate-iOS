@@ -98,6 +98,9 @@ struct TodayView: View {
                         },
                         skipDose: {
                             await viewModel.skipDose(dose)
+                        },
+                        undoDoseRecord: {
+                            await viewModel.undoDoseRecord(dose)
                         }
                     )
                 }
@@ -209,6 +212,7 @@ private struct TodayDoseRow: View {
     let isActionInProgress: Bool
     let markAsTaken: () async -> Void
     let skipDose: () async -> Void
+    let undoDoseRecord: () async -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -258,6 +262,25 @@ private struct TodayDoseRow: View {
                 }
                 .disabled(isActionInProgress)
                 .accessibilityLabel("Dose actions")
+            } else if TodayDoseFormatter.isCorrectable(dose.status) {
+                Menu {
+                    Button {
+                        Task {
+                            await undoDoseRecord()
+                        }
+                    } label: {
+                        Label("Undo", systemImage: "arrow.uturn.backward")
+                    }
+                } label: {
+                    if isActionInProgress {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "ellipsis.circle")
+                            .font(.title3)
+                    }
+                }
+                .disabled(isActionInProgress)
+                .accessibilityLabel("Dose correction actions")
             }
         }
         .padding(.vertical, 4)
@@ -342,6 +365,15 @@ private enum TodayDoseFormatter {
         case .upcoming, .due, .missed:
             return true
         case .taken, .skipped:
+            return false
+        }
+    }
+
+    static func isCorrectable(_ status: DoseStatus) -> Bool {
+        switch status {
+        case .taken, .skipped:
+            return true
+        case .upcoming, .due, .missed:
             return false
         }
     }

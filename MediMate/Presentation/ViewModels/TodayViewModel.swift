@@ -12,6 +12,7 @@ final class TodayViewModel: ObservableObject {
     private let reviewTodaysMedicationUseCase: ReviewTodaysMedicationUseCase
     private let recordDoseAsTakenUseCase: RecordDoseAsTakenUseCase
     private let skipScheduledDoseUseCase: SkipScheduledDoseUseCase
+    private let correctDoseRecordUseCase: CorrectDoseRecordUseCase
     private let referenceDateProvider: () -> Date
     private let actionDateProvider: () -> Date
 
@@ -39,6 +40,7 @@ final class TodayViewModel: ObservableObject {
         reviewTodaysMedicationUseCase: ReviewTodaysMedicationUseCase,
         recordDoseAsTakenUseCase: RecordDoseAsTakenUseCase,
         skipScheduledDoseUseCase: SkipScheduledDoseUseCase,
+        correctDoseRecordUseCase: CorrectDoseRecordUseCase,
         referenceDateProvider: @escaping () -> Date = Date.init,
         actionDateProvider: @escaping () -> Date = Date.init,
         summary: DailyMedicationSummary? = nil,
@@ -49,6 +51,7 @@ final class TodayViewModel: ObservableObject {
         self.reviewTodaysMedicationUseCase = reviewTodaysMedicationUseCase
         self.recordDoseAsTakenUseCase = recordDoseAsTakenUseCase
         self.skipScheduledDoseUseCase = skipScheduledDoseUseCase
+        self.correctDoseRecordUseCase = correctDoseRecordUseCase
         self.referenceDateProvider = referenceDateProvider
         self.actionDateProvider = actionDateProvider
         self.summary = summary
@@ -130,6 +133,32 @@ final class TodayViewModel: ObservableObject {
         }
     }
 
+    func undoDoseRecord(_ dose: ScheduledDose) async {
+        guard actionInProgressDoseID == nil else {
+            return
+        }
+
+        actionInProgressDoseID = dose.id
+        actionErrorMessage = nil
+
+        defer {
+            actionInProgressDoseID = nil
+        }
+
+        do {
+            _ = try await correctDoseRecordUseCase.execute(
+                scheduledDoseID: dose.id,
+                correction: .notTaken,
+                referenceDate: referenceDateProvider()
+            )
+            await loadToday()
+        } catch let error as CorrectDoseRecordUseCaseError {
+            actionErrorMessage = mapError(error)
+        } catch {
+            actionErrorMessage = "We couldn't correct this dose. Please try again."
+        }
+    }
+
     private func mapError(_ error: ReviewTodaysMedicationUseCaseError) -> String {
         switch error {
         case .invalidDateCalculation:
@@ -162,6 +191,15 @@ final class TodayViewModel: ObservableObject {
             return "This dose is no longer available."
         case .persistenceFailure:
             return "We couldn't update this dose. Please try again."
+        }
+    }
+
+    private func mapError(_ error: CorrectDoseRecordUseCaseError) -> String {
+        switch error {
+        case .doseNotFound:
+            return "This dose is no longer available."
+        case .persistenceFailure:
+            return "We couldn't correct this dose. Please try again."
         }
     }
 }

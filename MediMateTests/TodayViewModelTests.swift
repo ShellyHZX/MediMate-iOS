@@ -267,6 +267,35 @@ struct TodayViewModelTests {
         #expect(viewModel.actionInProgressDoseID == nil)
     }
 
+    @Test func undoDoseRecordCorrectsDoseAndReloadsToday() async throws {
+        let repository = MockScheduledDoseRepository()
+        let takenDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007B01"),
+            scheduledAt: TestDates.date(2026, 5, 4, 8, 0),
+            status: .taken,
+            takenAt: TestDates.date(2026, 5, 4, 8, 5)
+        )
+        repository.scheduledDoseByID[takenDose.id] = takenDose
+        repository.scheduledDosesInRange = [takenDose]
+        let viewModel = makeViewModel(
+            repository: repository,
+            referenceDate: TestDates.date(2026, 5, 4, 12, 0)
+        )
+
+        await viewModel.loadToday()
+        let loadedDose = try #require(viewModel.doses.first)
+        await viewModel.undoDoseRecord(loadedDose)
+
+        #expect(repository.fetchedScheduledDoseIDs == [takenDose.id])
+        #expect(repository.savedScheduledDoses.first?.status == .due)
+        #expect(repository.savedScheduledDoses.first?.takenAt == nil)
+        #expect(repository.fetchedRangeRequests.count == 2)
+        #expect(viewModel.doses.first?.status == .due)
+        #expect(viewModel.completedCount == 0)
+        #expect(viewModel.actionInProgressDoseID == nil)
+        #expect(viewModel.actionErrorMessage == nil)
+    }
+
     private func makeViewModel(
         repository: MockScheduledDoseRepository,
         referenceDate: Date = TestDates.date(2026, 5, 4, 12, 0),
@@ -282,6 +311,10 @@ struct TodayViewModelTests {
             ),
             skipScheduledDoseUseCase: SkipScheduledDoseUseCase(
                 scheduledDoseRepository: repository
+            ),
+            correctDoseRecordUseCase: CorrectDoseRecordUseCase(
+                scheduledDoseRepository: repository,
+                calendar: TestDates.calendar
             ),
             referenceDateProvider: { referenceDate },
             actionDateProvider: { actionDate }

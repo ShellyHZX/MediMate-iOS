@@ -6,13 +6,15 @@ struct TodayTabView: View {
     init(
         reviewTodaysMedicationUseCase: ReviewTodaysMedicationUseCase,
         recordDoseAsTakenUseCase: RecordDoseAsTakenUseCase,
-        skipScheduledDoseUseCase: SkipScheduledDoseUseCase
+        skipScheduledDoseUseCase: SkipScheduledDoseUseCase,
+        correctDoseRecordUseCase: CorrectDoseRecordUseCase
     ) {
         _viewModel = StateObject(
             wrappedValue: TodayViewModel(
                 reviewTodaysMedicationUseCase: reviewTodaysMedicationUseCase,
                 recordDoseAsTakenUseCase: recordDoseAsTakenUseCase,
-                skipScheduledDoseUseCase: skipScheduledDoseUseCase
+                skipScheduledDoseUseCase: skipScheduledDoseUseCase,
+                correctDoseRecordUseCase: correctDoseRecordUseCase
             )
         )
     }
