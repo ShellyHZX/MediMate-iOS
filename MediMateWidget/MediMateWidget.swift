@@ -145,7 +145,7 @@ private struct SmallMedicationWidgetView: View {
                 WidgetEmptyContent(title: "Open MediMate", message: "Update Today")
 
             case .empty:
-                WidgetEmptyContent(title: "All set", message: "No doses scheduled")
+                WidgetEmptyContent(title: "No doses today", message: "You're all set")
 
             case .upcoming(let moment), .due(let moment), .notRecorded(let moment):
                 StatusPill(state: entry.display, entryDate: entry.date, scheduledAt: moment.scheduledAt, prominent: true)
@@ -157,17 +157,15 @@ private struct SmallMedicationWidgetView: View {
                     .lineLimit(2)
 
             case .recorded(let next):
-                StatusPill(state: entry.display, entryDate: entry.date, scheduledAt: next?.scheduledAt ?? entry.date, prominent: true)
                 if let next {
-                    Text("Next \(WidgetText.time(next.scheduledAt))")
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(WidgetTheme.primaryText)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
+                    StatusPill(state: .upcoming(next), entryDate: entry.date, scheduledAt: next.scheduledAt, prominent: true)
+                    MomentTime(moment: next, size: .large)
                     Spacer(minLength: 0)
                     Text(WidgetText.medicationsLeft(next.medications.count))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(WidgetTheme.secondaryText)
+                } else {
+                    StatusPill(state: .allRecorded, entryDate: entry.date, scheduledAt: entry.date, prominent: true)
                 }
 
             case .allRecorded:
@@ -224,7 +222,7 @@ private struct MediumMedicationWidgetView: View {
                 WidgetEmptyContent(title: "Open MediMate", message: "Widget data will appear here")
 
             case .empty:
-                WidgetEmptyContent(title: "All set", message: "No doses today")
+                WidgetEmptyContent(title: "No doses today", message: "You're all set")
 
             case .upcoming(let moment), .due(let moment), .notRecorded(let moment):
                 VStack(alignment: .leading, spacing: 7) {
@@ -235,18 +233,15 @@ private struct MediumMedicationWidgetView: View {
                 MedicationContext(moment: moment)
 
             case .recorded(let next):
-                StatusPill(state: entry.display, entryDate: entry.date, scheduledAt: next?.scheduledAt ?? entry.date, prominent: true)
                 if let next {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text("Next \(WidgetText.time(next.scheduledAt))")
-                            .font(.title3.weight(.bold))
-                            .foregroundStyle(WidgetTheme.primaryText)
-                        Text(WidgetText.medicationsLeft(next.medications.count))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(WidgetTheme.secondaryText)
+                    VStack(alignment: .leading, spacing: 7) {
+                        StatusPill(state: .upcoming(next), entryDate: entry.date, scheduledAt: next.scheduledAt, prominent: true)
+                        MomentTime(moment: next, size: .large)
                     }
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+
+                    MedicationContext(moment: next)
+                } else {
+                    StatusPill(state: .allRecorded, entryDate: entry.date, scheduledAt: entry.date, prominent: true)
                 }
 
             case .allRecorded:
@@ -393,7 +388,9 @@ private struct StatusPill: View {
             return "Due now"
         case .notRecorded:
             return "Not recorded yet"
-        case .recorded, .allRecorded:
+        case .recorded:
+            return "Up next"
+        case .allRecorded:
             return "All set"
         case .empty, .noSnapshot:
             return "Today"
@@ -408,7 +405,9 @@ private struct StatusPill: View {
             return "exclamationmark.circle"
         case .notRecorded:
             return "questionmark.circle"
-        case .recorded, .allRecorded:
+        case .recorded:
+            return "clock"
+        case .allRecorded:
             return "checkmark.circle"
         case .empty, .noSnapshot:
             return "calendar"
@@ -423,7 +422,9 @@ private struct StatusPill: View {
             return WidgetTheme.due
         case .notRecorded:
             return WidgetTheme.notRecorded
-        case .recorded, .allRecorded:
+        case .recorded:
+            return WidgetTheme.accent
+        case .allRecorded:
             return WidgetTheme.recorded
         case .empty, .noSnapshot:
             return WidgetTheme.secondaryText
