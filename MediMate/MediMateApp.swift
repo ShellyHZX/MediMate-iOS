@@ -38,6 +38,8 @@ struct MediMateApp: App {
             snapshotStore: MedicationWidgetSnapshotStore(),
             calendar: calendar
         )
+        let notificationScheduler = MedicationNotificationScheduler(calendar: calendar)
+        MedicationNotificationScheduler.registerMedicationDueCategory()
         let reviewMedicationsUseCase = ReviewMedicationsUseCase(medicationRepository: medicationRepository)
         let addMedicationUseCase = AddMedicationUseCase(medicationRepository: medicationRepository)
         let scheduleMedicationUseCase = ScheduleMedicationUseCase(
@@ -72,6 +74,7 @@ struct MediMateApp: App {
                 correctDoseRecordUseCase: correctDoseRecordUseCase,
                 reviewMedicationHistoryUseCase: reviewMedicationHistoryUseCase,
                 widgetSnapshotSynchronizer: widgetSnapshotSynchronizer,
+                notificationScheduler: notificationScheduler,
                 reviewMedicationsUseCase: reviewMedicationsUseCase,
                 addMedicationAndScheduleUseCase: addMedicationAndScheduleUseCase,
                 updateMedicationAndRescheduleUseCase: updateMedicationAndRescheduleUseCase,

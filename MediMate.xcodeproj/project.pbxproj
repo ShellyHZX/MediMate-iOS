@@ -10,6 +10,9 @@
 		3F71090E3070B05300CF5420 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F71090D3070B05200CF5420 /* WidgetKit.framework */; };
 		3F7109103070B05300CF5420 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F71090F3070B05300CF5420 /* SwiftUI.framework */; };
 		3F71091B3070B05500CF5420 /* MediMateWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3F71090B3070B05200CF5420 /* MediMateWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		3F710AA23070C7A700CF5420 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F710AA13070C7A700CF5420 /* UserNotifications.framework */; };
+		3F710AA43070C7A700CF5420 /* UserNotificationsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F710AA33070C7A700CF5420 /* UserNotificationsUI.framework */; };
+		3F710AAE3070C7A800CF5420 /* MediMateNotificationContent.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3F710AA03070C7A700CF5420 /* MediMateNotificationContent.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +37,13 @@
 			remoteGlobalIDString = 3F71090A3070B05200CF5420;
 			remoteInfo = MediMateWidgetExtension;
 		};
+		3F710AAC3070C7A800CF5420 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3F7107AD306DF5A800CF5420 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3F710A9F3070C7A700CF5420;
+			remoteInfo = MediMateNotificationContent;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -44,6 +54,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				3F71091B3070B05500CF5420 /* MediMateWidgetExtension.appex in Embed Foundation Extensions */,
+				3F710AAE3070C7A800CF5420 /* MediMateNotificationContent.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -58,6 +69,9 @@
 		3F71090D3070B05200CF5420 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		3F71090F3070B05300CF5420 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		3F7109223070B13500CF5420 /* MediMateWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MediMateWidgetExtension.entitlements; sourceTree = "<group>"; };
+		3F710AA03070C7A700CF5420 /* MediMateNotificationContent.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MediMateNotificationContent.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		3F710AA13070C7A700CF5420 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
+		3F710AA33070C7A700CF5420 /* UserNotificationsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotificationsUI.framework; path = System/Library/Frameworks/UserNotificationsUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -67,6 +81,13 @@
 				Info.plist,
 			);
 			target = 3F71090A3070B05200CF5420 /* MediMateWidgetExtension */;
+		};
+		3F710AB13070C7A800CF5420 /* Exceptions for "MediMateNotificationContent" folder in "MediMateNotificationContent" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 3F710A9F3070C7A700CF5420 /* MediMateNotificationContent */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -97,6 +118,14 @@
 		3F7109303070C00100CF5420 /* MediMateShared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = MediMateShared;
+			sourceTree = "<group>";
+		};
+		3F710AA53070C7A700CF5420 /* MediMateNotificationContent */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				3F710AB13070C7A800CF5420 /* Exceptions for "MediMateNotificationContent" folder in "MediMateNotificationContent" target */,
+			);
+			path = MediMateNotificationContent;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -132,6 +161,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3F710A9D3070C7A700CF5420 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3F710AA43070C7A700CF5420 /* UserNotificationsUI.framework in Frameworks */,
+				3F710AA23070C7A700CF5420 /* UserNotifications.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -144,6 +182,7 @@
 				3F7107CF306DF5AB00CF5420 /* MediMateUITests */,
 				3F7109303070C00100CF5420 /* MediMateShared */,
 				3F7109113070B05300CF5420 /* MediMateWidget */,
+				3F710AA53070C7A700CF5420 /* MediMateNotificationContent */,
 				3F71090C3070B05200CF5420 /* Frameworks */,
 				3F7107B6306DF5A800CF5420 /* Products */,
 			);
@@ -156,6 +195,7 @@
 				3F7107C2306DF5AB00CF5420 /* MediMateTests.xctest */,
 				3F7107CC306DF5AB00CF5420 /* MediMateUITests.xctest */,
 				3F71090B3070B05200CF5420 /* MediMateWidgetExtension.appex */,
+				3F710AA03070C7A700CF5420 /* MediMateNotificationContent.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -165,6 +205,8 @@
 			children = (
 				3F71090D3070B05200CF5420 /* WidgetKit.framework */,
 				3F71090F3070B05300CF5420 /* SwiftUI.framework */,
+				3F710AA13070C7A700CF5420 /* UserNotifications.framework */,
+				3F710AA33070C7A700CF5420 /* UserNotificationsUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -185,6 +227,7 @@
 			);
 			dependencies = (
 				3F71091A3070B05500CF5420 /* PBXTargetDependency */,
+				3F710AAD3070C7A800CF5420 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				3F7107B7306DF5A800CF5420 /* MediMate */,
@@ -266,6 +309,28 @@
 			productReference = 3F71090B3070B05200CF5420 /* MediMateWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		3F710A9F3070C7A700CF5420 /* MediMateNotificationContent */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3F710AB23070C7A800CF5420 /* Build configuration list for PBXNativeTarget "MediMateNotificationContent" */;
+			buildPhases = (
+				3F710A9C3070C7A700CF5420 /* Sources */,
+				3F710A9D3070C7A700CF5420 /* Frameworks */,
+				3F710A9E3070C7A700CF5420 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				3F710AA53070C7A700CF5420 /* MediMateNotificationContent */,
+			);
+			name = MediMateNotificationContent;
+			packageProductDependencies = (
+			);
+			productName = MediMateNotificationContent;
+			productReference = 3F710AA03070C7A700CF5420 /* MediMateNotificationContent.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -290,6 +355,9 @@
 					3F71090A3070B05200CF5420 = {
 						CreatedOnToolsVersion = 26.3;
 					};
+					3F710A9F3070C7A700CF5420 = {
+						CreatedOnToolsVersion = 26.3;
+					};
 				};
 			};
 			buildConfigurationList = 3F7107B0306DF5A800CF5420 /* Build configuration list for PBXProject "MediMate" */;
@@ -310,6 +378,7 @@
 				3F7107C1306DF5AB00CF5420 /* MediMateTests */,
 				3F7107CB306DF5AB00CF5420 /* MediMateUITests */,
 				3F71090A3070B05200CF5420 /* MediMateWidgetExtension */,
+				3F710A9F3070C7A700CF5420 /* MediMateNotificationContent */,
 			);
 		};
 /* End PBXProject section */
@@ -337,6 +406,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		3F7109093070B05200CF5420 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3F710A9E3070C7A700CF5420 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -374,6 +450,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3F710A9C3070C7A700CF5420 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -391,6 +474,11 @@
 			isa = PBXTargetDependency;
 			target = 3F71090A3070B05200CF5420 /* MediMateWidgetExtension */;
 			targetProxy = 3F7109193070B05500CF5420 /* PBXContainerItemProxy */;
+		};
+		3F710AAD3070C7A800CF5420 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3F710A9F3070C7A700CF5420 /* MediMateNotificationContent */;
+			targetProxy = 3F710AAC3070C7A800CF5420 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -728,6 +816,64 @@
 			};
 			name = Release;
 		};
+		3F710AAF3070C7A800CF5420 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MediMateNotificationContent/MediMateNotificationContent.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SULGCQVAX9;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MediMateNotificationContent/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MediMateNotificationContent;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shellyh.MediMate.MediMateNotificationContent;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3F710AB03070C7A800CF5420 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MediMateNotificationContent/MediMateNotificationContent.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SULGCQVAX9;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MediMateNotificationContent/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MediMateNotificationContent;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shellyh.MediMate.MediMateNotificationContent;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -772,6 +918,15 @@
 			buildConfigurations = (
 				3F71091E3070B05500CF5420 /* Debug */,
 				3F71091F3070B05500CF5420 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3F710AB23070C7A800CF5420 /* Build configuration list for PBXNativeTarget "MediMateNotificationContent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3F710AAF3070C7A800CF5420 /* Debug */,
+				3F710AB03070C7A800CF5420 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

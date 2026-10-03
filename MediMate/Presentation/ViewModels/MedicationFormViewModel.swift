@@ -26,6 +26,7 @@ final class MedicationFormViewModel: ObservableObject {
     private let deactivateMedicationUseCase: DeactivateMedicationUseCase
     private let deleteMedicationUseCase: DeleteMedicationUseCase
     private let widgetSnapshotSynchronizer: WidgetSnapshotSynchronizing?
+    private let notificationScheduler: MedicationNotificationScheduling?
 
     var isAddMode: Bool {
         if case .add = mode {
@@ -53,7 +54,8 @@ final class MedicationFormViewModel: ObservableObject {
         updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase,
         deactivateMedicationUseCase: DeactivateMedicationUseCase,
         deleteMedicationUseCase: DeleteMedicationUseCase,
-        widgetSnapshotSynchronizer: WidgetSnapshotSynchronizing? = nil
+        widgetSnapshotSynchronizer: WidgetSnapshotSynchronizing? = nil,
+        notificationScheduler: MedicationNotificationScheduling? = nil
     ) {
         self.mode = mode
         self.addMedicationAndScheduleUseCase = addMedicationAndScheduleUseCase
@@ -61,6 +63,7 @@ final class MedicationFormViewModel: ObservableObject {
         self.deactivateMedicationUseCase = deactivateMedicationUseCase
         self.deleteMedicationUseCase = deleteMedicationUseCase
         self.widgetSnapshotSynchronizer = widgetSnapshotSynchronizer
+        self.notificationScheduler = notificationScheduler
         self.isSaving = false
         self.errorMessage = nil
         self.savedMedication = nil
@@ -105,6 +108,8 @@ final class MedicationFormViewModel: ObservableObject {
 
         do {
             let medication: Medication
+            let scheduledDoses: [ScheduledDose]
+            let isEditing: Bool
 
             switch mode {
             case .add:
@@ -118,6 +123,8 @@ final class MedicationFormViewModel: ObservableObject {
                     )
                 )
                 medication = result.medication
+                scheduledDoses = result.scheduledDoses
+                isEditing = false
 
             case .edit(let existingMedication):
                 let result = try await updateMedicationAndRescheduleUseCase.execute(
@@ -131,10 +138,17 @@ final class MedicationFormViewModel: ObservableObject {
                     )
                 )
                 medication = result.medication
+                scheduledDoses = result.scheduledDoses
+                isEditing = true
             }
 
             savedMedication = medication
             await syncWidgetSnapshot()
+            await syncNotifications(
+                for: medication,
+                scheduledDoses: scheduledDoses,
+                replacingExistingRequests: isEditing
+            )
             return medication
         } catch let error as AddMedicationAndScheduleUseCaseError {
             errorMessage = mapError(error)
@@ -173,6 +187,7 @@ final class MedicationFormViewModel: ObservableObject {
             let deactivatedMedication = try await deactivateMedicationUseCase.execute(medicationID: medication.id)
             self.deactivatedMedication = deactivatedMedication
             await syncWidgetSnapshot()
+            await notificationScheduler?.removePendingNotifications(for: medication.id)
             return deactivatedMedication
         } catch let error as DeactivateMedicationUseCaseError {
             errorMessage = mapError(error)
@@ -204,6 +219,7 @@ final class MedicationFormViewModel: ObservableObject {
             try await deleteMedicationUseCase.execute(medicationID: medication.id)
             didDeleteMedication = true
             await syncWidgetSnapshot()
+            await notificationScheduler?.removePendingNotifications(for: medication.id)
             return true
         } catch let error as DeleteMedicationUseCaseError {
             errorMessage = mapError(error)
@@ -322,5 +338,28 @@ final class MedicationFormViewModel: ObservableObject {
 
     private func syncWidgetSnapshot() async {
         await widgetSnapshotSynchronizer?.sync(referenceDate: Date())
+    }
+
+    private func syncNotifications(
+        for medication: Medication,
+        scheduledDoses: [ScheduledDose],
+        replacingExistingRequests: Bool
+    ) async {
+        guard let notificationScheduler else {
+            return
+        }
+
+        if replacingExistingRequests {
+            await notificationScheduler.rescheduleNotifications(
+                for: medication.id,
+                scheduledDoses: scheduledDoses,
+                referenceDate: Date()
+            )
+        } else {
+            await notificationScheduler.scheduleNotifications(
+                for: scheduledDoses,
+                referenceDate: Date()
+            )
+        }
     }
 }

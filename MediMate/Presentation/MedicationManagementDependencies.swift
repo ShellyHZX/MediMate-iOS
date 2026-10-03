@@ -10,6 +10,7 @@ final class MedicationManagementDependencies: ObservableObject {
     let correctDoseRecordUseCase: CorrectDoseRecordUseCase
     let reviewMedicationHistoryUseCase: ReviewMedicationHistoryUseCase
     let widgetSnapshotSynchronizer: WidgetSnapshotSynchronizing
+    let notificationScheduler: MedicationNotificationScheduling
     let reviewMedicationsUseCase: ReviewMedicationsUseCase
     let addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase
     let updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase
@@ -24,6 +25,7 @@ final class MedicationManagementDependencies: ObservableObject {
         correctDoseRecordUseCase: CorrectDoseRecordUseCase,
         reviewMedicationHistoryUseCase: ReviewMedicationHistoryUseCase,
         widgetSnapshotSynchronizer: WidgetSnapshotSynchronizing,
+        notificationScheduler: MedicationNotificationScheduling,
         reviewMedicationsUseCase: ReviewMedicationsUseCase,
         addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase,
         updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase,
@@ -37,6 +39,7 @@ final class MedicationManagementDependencies: ObservableObject {
         self.correctDoseRecordUseCase = correctDoseRecordUseCase
         self.reviewMedicationHistoryUseCase = reviewMedicationHistoryUseCase
         self.widgetSnapshotSynchronizer = widgetSnapshotSynchronizer
+        self.notificationScheduler = notificationScheduler
         self.reviewMedicationsUseCase = reviewMedicationsUseCase
         self.addMedicationAndScheduleUseCase = addMedicationAndScheduleUseCase
         self.updateMedicationAndRescheduleUseCase = updateMedicationAndRescheduleUseCase
