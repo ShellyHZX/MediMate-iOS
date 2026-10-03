@@ -15,6 +15,7 @@ final class TodayViewModel: ObservableObject {
     private let recordMedicationMomentAsTakenUseCase: RecordMedicationMomentAsTakenUseCase
     private let skipScheduledDoseUseCase: SkipScheduledDoseUseCase
     private let correctDoseRecordUseCase: CorrectDoseRecordUseCase
+    private let widgetSnapshotSynchronizer: WidgetSnapshotSynchronizing?
     private let calendar: Calendar
     private let referenceDateProvider: () -> Date
     private let actionDateProvider: () -> Date
@@ -79,6 +80,7 @@ final class TodayViewModel: ObservableObject {
         recordMedicationMomentAsTakenUseCase: RecordMedicationMomentAsTakenUseCase,
         skipScheduledDoseUseCase: SkipScheduledDoseUseCase,
         correctDoseRecordUseCase: CorrectDoseRecordUseCase,
+        widgetSnapshotSynchronizer: WidgetSnapshotSynchronizing? = nil,
         calendar: Calendar,
         referenceDateProvider: @escaping () -> Date = Date.init,
         actionDateProvider: @escaping () -> Date = Date.init,
@@ -93,6 +95,7 @@ final class TodayViewModel: ObservableObject {
         self.recordMedicationMomentAsTakenUseCase = recordMedicationMomentAsTakenUseCase
         self.skipScheduledDoseUseCase = skipScheduledDoseUseCase
         self.correctDoseRecordUseCase = correctDoseRecordUseCase
+        self.widgetSnapshotSynchronizer = widgetSnapshotSynchronizer
         self.calendar = calendar
         self.referenceDateProvider = referenceDateProvider
         self.actionDateProvider = actionDateProvider
@@ -117,7 +120,9 @@ final class TodayViewModel: ObservableObject {
         }
 
         do {
-            summary = try await reviewTodaysMedicationUseCase.execute(referenceDate: referenceDateProvider())
+            let referenceDate = referenceDateProvider()
+            summary = try await reviewTodaysMedicationUseCase.execute(referenceDate: referenceDate)
+            await syncWidgetSnapshot(referenceDate: referenceDate)
         } catch let error as ReviewTodaysMedicationUseCaseError {
             errorMessage = mapError(error)
         } catch {
@@ -146,6 +151,7 @@ final class TodayViewModel: ObservableObject {
                 scheduledDoseID: dose.id,
                 takenAt: actionDateProvider()
             )
+            await syncWidgetSnapshot(referenceDate: referenceDateProvider())
             await loadToday()
         } catch let error as RecordDoseAsTakenUseCaseError {
             actionErrorMessage = mapError(error)
@@ -168,6 +174,7 @@ final class TodayViewModel: ObservableObject {
 
         do {
             _ = try await skipScheduledDoseUseCase.execute(scheduledDoseID: dose.id)
+            await syncWidgetSnapshot(referenceDate: referenceDateProvider())
             await loadToday()
         } catch let error as SkipScheduledDoseUseCaseError {
             actionErrorMessage = mapError(error)
@@ -194,6 +201,7 @@ final class TodayViewModel: ObservableObject {
                 correction: .notTaken,
                 referenceDate: referenceDateProvider()
             )
+            await syncWidgetSnapshot(referenceDate: referenceDateProvider())
             await loadToday()
         } catch let error as CorrectDoseRecordUseCaseError {
             actionErrorMessage = mapError(error)
@@ -225,6 +233,7 @@ final class TodayViewModel: ObservableObject {
                 scheduledDoseIDs: unresolvedDoses.map(\.id),
                 takenAt: actionDateProvider()
             )
+            await syncWidgetSnapshot(referenceDate: referenceDateProvider())
             await loadToday()
         } catch let error as RecordMedicationMomentAsTakenUseCaseError {
             actionErrorMessage = mapError(error)
@@ -299,5 +308,9 @@ final class TodayViewModel: ObservableObject {
     private func calendarMinute(for date: Date) -> Date {
         let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
         return calendar.date(from: components) ?? date
+    }
+
+    private func syncWidgetSnapshot(referenceDate: Date) async {
+        await widgetSnapshotSynchronizer?.sync(referenceDate: referenceDate)
     }
 }

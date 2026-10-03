@@ -2,6 +2,8 @@ import SwiftUI
 
 @main
 struct MediMateApp: App {
+    @Environment(\.scenePhase) private var scenePhase
+
     private let persistenceController: PersistenceController
     @StateObject private var medicationManagementDependencies: MedicationManagementDependencies
 
@@ -29,6 +31,11 @@ struct MediMateApp: App {
         )
         let reviewMedicationHistoryUseCase = ReviewMedicationHistoryUseCase(
             scheduledDoseRepository: scheduledDoseRepository,
+            calendar: calendar
+        )
+        let widgetSnapshotSynchronizer = WidgetSnapshotSynchronizer(
+            reviewTodaysMedicationUseCase: reviewTodaysMedicationUseCase,
+            snapshotStore: MedicationWidgetSnapshotStore(),
             calendar: calendar
         )
         let reviewMedicationsUseCase = ReviewMedicationsUseCase(medicationRepository: medicationRepository)
@@ -64,6 +71,7 @@ struct MediMateApp: App {
                 skipScheduledDoseUseCase: skipScheduledDoseUseCase,
                 correctDoseRecordUseCase: correctDoseRecordUseCase,
                 reviewMedicationHistoryUseCase: reviewMedicationHistoryUseCase,
+                widgetSnapshotSynchronizer: widgetSnapshotSynchronizer,
                 reviewMedicationsUseCase: reviewMedicationsUseCase,
                 addMedicationAndScheduleUseCase: addMedicationAndScheduleUseCase,
                 updateMedicationAndRescheduleUseCase: updateMedicationAndRescheduleUseCase,
@@ -77,6 +85,18 @@ struct MediMateApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(medicationManagementDependencies)
+                .task {
+                    await medicationManagementDependencies.widgetSnapshotSynchronizer.sync(referenceDate: Date())
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    guard newPhase == .active else {
+                        return
+                    }
+
+                    Task {
+                        await medicationManagementDependencies.widgetSnapshotSynchronizer.sync(referenceDate: Date())
+                    }
+                }
         }
     }
 }

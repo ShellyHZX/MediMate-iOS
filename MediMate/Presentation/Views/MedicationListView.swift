@@ -147,7 +147,8 @@ struct MedicationListView: View {
                 addMedicationAndScheduleUseCase: dependencies.addMedicationAndScheduleUseCase,
                 updateMedicationAndRescheduleUseCase: dependencies.updateMedicationAndRescheduleUseCase,
                 deactivateMedicationUseCase: dependencies.deactivateMedicationUseCase,
-                deleteMedicationUseCase: dependencies.deleteMedicationUseCase
+                deleteMedicationUseCase: dependencies.deleteMedicationUseCase,
+                widgetSnapshotSynchronizer: dependencies.widgetSnapshotSynchronizer
             )
         ) { _ in
             Task {

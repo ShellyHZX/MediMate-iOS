@@ -25,6 +25,7 @@ final class MedicationFormViewModel: ObservableObject {
     private let updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase
     private let deactivateMedicationUseCase: DeactivateMedicationUseCase
     private let deleteMedicationUseCase: DeleteMedicationUseCase
+    private let widgetSnapshotSynchronizer: WidgetSnapshotSynchronizing?
 
     var isAddMode: Bool {
         if case .add = mode {
@@ -51,13 +52,15 @@ final class MedicationFormViewModel: ObservableObject {
         addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase,
         updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase,
         deactivateMedicationUseCase: DeactivateMedicationUseCase,
-        deleteMedicationUseCase: DeleteMedicationUseCase
+        deleteMedicationUseCase: DeleteMedicationUseCase,
+        widgetSnapshotSynchronizer: WidgetSnapshotSynchronizing? = nil
     ) {
         self.mode = mode
         self.addMedicationAndScheduleUseCase = addMedicationAndScheduleUseCase
         self.updateMedicationAndRescheduleUseCase = updateMedicationAndRescheduleUseCase
         self.deactivateMedicationUseCase = deactivateMedicationUseCase
         self.deleteMedicationUseCase = deleteMedicationUseCase
+        self.widgetSnapshotSynchronizer = widgetSnapshotSynchronizer
         self.isSaving = false
         self.errorMessage = nil
         self.savedMedication = nil
@@ -131,6 +134,7 @@ final class MedicationFormViewModel: ObservableObject {
             }
 
             savedMedication = medication
+            await syncWidgetSnapshot()
             return medication
         } catch let error as AddMedicationAndScheduleUseCaseError {
             errorMessage = mapError(error)
@@ -168,6 +172,7 @@ final class MedicationFormViewModel: ObservableObject {
         do {
             let deactivatedMedication = try await deactivateMedicationUseCase.execute(medicationID: medication.id)
             self.deactivatedMedication = deactivatedMedication
+            await syncWidgetSnapshot()
             return deactivatedMedication
         } catch let error as DeactivateMedicationUseCaseError {
             errorMessage = mapError(error)
@@ -198,6 +203,7 @@ final class MedicationFormViewModel: ObservableObject {
         do {
             try await deleteMedicationUseCase.execute(medicationID: medication.id)
             didDeleteMedication = true
+            await syncWidgetSnapshot()
             return true
         } catch let error as DeleteMedicationUseCaseError {
             errorMessage = mapError(error)
@@ -312,5 +318,9 @@ final class MedicationFormViewModel: ObservableObject {
              .deleteMedicationFailure:
             return "We couldn't delete this medication. Please try again."
         }
+    }
+
+    private func syncWidgetSnapshot() async {
+        await widgetSnapshotSynchronizer?.sync(referenceDate: Date())
     }
 }

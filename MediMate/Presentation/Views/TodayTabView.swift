@@ -9,6 +9,7 @@ struct TodayTabView: View {
         recordMedicationMomentAsTakenUseCase: RecordMedicationMomentAsTakenUseCase,
         skipScheduledDoseUseCase: SkipScheduledDoseUseCase,
         correctDoseRecordUseCase: CorrectDoseRecordUseCase,
+        widgetSnapshotSynchronizer: WidgetSnapshotSynchronizing? = nil,
         calendar: Calendar = .autoupdatingCurrent
     ) {
         _viewModel = StateObject(
@@ -18,6 +19,7 @@ struct TodayTabView: View {
                 recordMedicationMomentAsTakenUseCase: recordMedicationMomentAsTakenUseCase,
                 skipScheduledDoseUseCase: skipScheduledDoseUseCase,
                 correctDoseRecordUseCase: correctDoseRecordUseCase,
+                widgetSnapshotSynchronizer: widgetSnapshotSynchronizer,
                 calendar: calendar
             )
         )
