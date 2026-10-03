@@ -69,7 +69,8 @@ struct MedicationDetailView: View {
                             mode: .edit(medication),
                             addMedicationAndScheduleUseCase: dependencies.addMedicationAndScheduleUseCase,
                             updateMedicationAndRescheduleUseCase: dependencies.updateMedicationAndRescheduleUseCase,
-                            deactivateMedicationUseCase: dependencies.deactivateMedicationUseCase
+                            deactivateMedicationUseCase: dependencies.deactivateMedicationUseCase,
+                            deleteMedicationUseCase: dependencies.deleteMedicationUseCase
                         )
                     ) { completion in
                         switch completion {
@@ -79,6 +80,10 @@ struct MedicationDetailView: View {
 
                         case .deactivated(let updatedMedication):
                             medication = updatedMedication
+                            onMedicationChanged()
+                            dismiss()
+
+                        case .deleted:
                             onMedicationChanged()
                             dismiss()
                         }

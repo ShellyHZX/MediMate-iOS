@@ -72,6 +72,53 @@ struct TodayViewModelTests {
         #expect(viewModel.hasDoses)
     }
 
+    @Test func dosesWithSameCalendarMinuteGroupIntoOneMedicationMoment() async throws {
+        let repository = MockScheduledDoseRepository()
+        let firstDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007C01"),
+            medicationName: "Beta",
+            scheduledAt: TestDates.date(2026, 5, 4, 12, 0),
+            status: .upcoming
+        )
+        let secondDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007C02"),
+            medicationName: "Alpha",
+            scheduledAt: TestDates.date(2026, 5, 4, 12, 0),
+            status: .due
+        )
+        repository.scheduledDosesInRange = [firstDose, secondDose]
+        let viewModel = makeViewModel(repository: repository)
+
+        await viewModel.loadToday()
+
+        #expect(viewModel.medicationMoments.count == 1)
+        #expect(viewModel.medicationMoments.first?.scheduledAt == TestDates.date(2026, 5, 4, 12, 0))
+        #expect(viewModel.medicationMoments.first?.doses.map(\.id) == [secondDose.id, firstDose.id])
+    }
+
+    @Test func differentMinutesCreateChronologicalMedicationMoments() async throws {
+        let repository = MockScheduledDoseRepository()
+        let laterDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007C03"),
+            scheduledAt: TestDates.date(2026, 5, 4, 12, 1),
+            status: .upcoming
+        )
+        let earlierDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007C04"),
+            scheduledAt: TestDates.date(2026, 5, 4, 8, 0),
+            status: .due
+        )
+        repository.scheduledDosesInRange = [laterDose, earlierDose]
+        let viewModel = makeViewModel(repository: repository)
+
+        await viewModel.loadToday()
+
+        #expect(viewModel.medicationMoments.map(\.scheduledAt) == [
+            TestDates.date(2026, 5, 4, 8, 0),
+            TestDates.date(2026, 5, 4, 12, 1)
+        ])
+    }
+
     @Test func loadFailureExposesHumanFacingErrorAndStopsLoading() async {
         let repository = MockScheduledDoseRepository()
         repository.fetchScheduledDosesError = MockScheduledDoseRepositoryError.requestedFailure
@@ -296,6 +343,71 @@ struct TodayViewModelTests {
         #expect(viewModel.actionErrorMessage == nil)
     }
 
+    @Test func markMomentAsTakenUpdatesOnlyUnresolvedDosesAndReloadsToday() async throws {
+        let repository = MockScheduledDoseRepository()
+        let actionDate = TestDates.date(2026, 5, 4, 12, 15)
+        let dueDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007D01"),
+            scheduledAt: TestDates.date(2026, 5, 4, 12, 0),
+            status: .upcoming
+        )
+        let takenDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007D02"),
+            scheduledAt: TestDates.date(2026, 5, 4, 12, 0),
+            status: .taken,
+            takenAt: TestDates.date(2026, 5, 4, 12, 5)
+        )
+        let skippedDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007D03"),
+            scheduledAt: TestDates.date(2026, 5, 4, 12, 0),
+            status: .skipped
+        )
+        repository.scheduledDoseByID[dueDose.id] = dueDose
+        repository.scheduledDoseByID[takenDose.id] = takenDose
+        repository.scheduledDoseByID[skippedDose.id] = skippedDose
+        repository.scheduledDosesInRange = [dueDose, takenDose, skippedDose]
+        let viewModel = makeViewModel(repository: repository, actionDate: actionDate)
+
+        await viewModel.loadToday()
+        let moment = try #require(viewModel.medicationMoments.first)
+        await viewModel.markMomentAsTaken(moment)
+
+        #expect(repository.fetchedScheduledDoseIDs == [dueDose.id])
+        #expect(repository.batchSavedScheduledDoses.first?.map(\.id) == [dueDose.id])
+        #expect(repository.batchSavedScheduledDoses.first?.first?.status == .taken)
+        #expect(repository.batchSavedScheduledDoses.first?.first?.takenAt == actionDate)
+        #expect(repository.fetchedRangeRequests.count == 2)
+        #expect(viewModel.doses.filter { $0.status == .taken }.count == 2)
+        #expect(viewModel.doses.contains(skippedDose))
+        #expect(viewModel.actionInProgressMomentID == nil)
+        #expect(viewModel.actionErrorMessage == nil)
+    }
+
+    @Test func momentWithNoUnresolvedDosesHasNoBatchActionTarget() async throws {
+        let repository = MockScheduledDoseRepository()
+        let takenDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007E01"),
+            scheduledAt: TestDates.date(2026, 5, 4, 12, 0),
+            status: .taken
+        )
+        let skippedDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000007E02"),
+            scheduledAt: TestDates.date(2026, 5, 4, 12, 0),
+            status: .skipped
+        )
+        repository.scheduledDosesInRange = [takenDose, skippedDose]
+        let viewModel = makeViewModel(repository: repository)
+
+        await viewModel.loadToday()
+        let moment = try #require(viewModel.medicationMoments.first)
+        await viewModel.markMomentAsTaken(moment)
+
+        #expect(!moment.hasUnresolvedDoses)
+        #expect(repository.batchSavedScheduledDoses.isEmpty)
+        #expect(repository.fetchedScheduledDoseIDs.isEmpty)
+        #expect(viewModel.actionErrorMessage == nil)
+    }
+
     private func makeViewModel(
         repository: MockScheduledDoseRepository,
         referenceDate: Date = TestDates.date(2026, 5, 4, 12, 0),
@@ -309,6 +421,9 @@ struct TodayViewModelTests {
             recordDoseAsTakenUseCase: RecordDoseAsTakenUseCase(
                 scheduledDoseRepository: repository
             ),
+            recordMedicationMomentAsTakenUseCase: RecordMedicationMomentAsTakenUseCase(
+                scheduledDoseRepository: repository
+            ),
             skipScheduledDoseUseCase: SkipScheduledDoseUseCase(
                 scheduledDoseRepository: repository
             ),
@@ -316,6 +431,7 @@ struct TodayViewModelTests {
                 scheduledDoseRepository: repository,
                 calendar: TestDates.calendar
             ),
+            calendar: TestDates.calendar,
             referenceDateProvider: { referenceDate },
             actionDateProvider: { actionDate }
         )

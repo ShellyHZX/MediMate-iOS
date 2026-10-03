@@ -4,11 +4,13 @@ struct MedicationFormView: View {
     enum Completion {
         case saved(Medication)
         case deactivated(Medication)
+        case deleted
     }
 
     @StateObject private var viewModel: MedicationFormViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var isShowingDeactivationConfirmation = false
+    @State private var isShowingDeletionConfirmation = false
     @State private var isShowingError = false
 
     private let onCompletion: (Completion) -> Void
@@ -28,8 +30,8 @@ struct MedicationFormView: View {
             scheduleSection
             instructionsSection
 
-            if viewModel.isDeactivationAvailable {
-                deactivationSection
+            if viewModel.isDeactivationAvailable || viewModel.isDeletionAvailable {
+                managementSection
             }
         }
         .navigationTitle(viewModel.isAddMode ? "Add Medication" : "Edit Medication")
@@ -69,6 +71,21 @@ struct MedicationFormView: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("Existing dose history will be kept.")
+        }
+        .confirmationDialog(
+            "Delete this medication?",
+            isPresented: $isShowingDeletionConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Medication", role: .destructive) {
+                Task {
+                    await deleteMedication()
+                }
+            }
+
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This permanently removes the medication and its unused scheduled doses. This can't be undone.")
         }
         .overlay {
             if viewModel.isSaving {
@@ -139,17 +156,37 @@ struct MedicationFormView: View {
         }
     }
 
-    private var deactivationSection: some View {
+    private var managementSection: some View {
         Section {
-            Button(role: .destructive) {
-                isShowingDeactivationConfirmation = true
-            } label: {
-                Text("Deactivate Medication")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
+            if viewModel.isDeactivationAvailable {
+                Button(role: .destructive) {
+                    isShowingDeactivationConfirmation = true
+                } label: {
+                    Text("Deactivate Medication")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .disabled(viewModel.isSaving)
+                .accessibilityLabel("Deactivate Medication")
             }
-            .disabled(viewModel.isSaving)
-            .accessibilityLabel("Deactivate Medication")
+
+            if viewModel.isDeletionAvailable {
+                Button(role: .destructive) {
+                    isShowingDeletionConfirmation = true
+                } label: {
+                    Text("Delete Medication")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .disabled(viewModel.isSaving)
+                .accessibilityLabel("Delete Medication")
+
+                Text("Only medications without recorded dose history can be permanently deleted.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Manage Medication")
         }
     }
 
@@ -215,6 +252,16 @@ struct MedicationFormView: View {
         }
 
         onCompletion(.deactivated(medication))
+        dismiss()
+    }
+
+    private func deleteMedication() async {
+        guard await viewModel.deleteMedication() else {
+            presentErrorIfNeeded()
+            return
+        }
+
+        onCompletion(.deleted)
         dismiss()
     }
 

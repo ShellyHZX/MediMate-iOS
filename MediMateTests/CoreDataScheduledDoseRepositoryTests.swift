@@ -261,6 +261,39 @@ struct CoreDataScheduledDoseRepositoryTests {
         #expect(keptFetchResult == keptDose)
     }
 
+    @Test func fetchScheduledDosesByMedicationIDUsesSnapshotMedicationID() async throws {
+        let environment = makeEnvironment()
+        let medicationID = uuid("00000000-0000-0000-0000-000000003013")
+        let matchingLaterDose = try makeDose(
+            id: uuid("00000000-0000-0000-0000-000000002015"),
+            medicationID: medicationID,
+            scheduledAt: TestDates.date(2026, 1, 11, 8, 0),
+            status: .upcoming
+        )
+        let matchingEarlierDose = try makeDose(
+            id: uuid("00000000-0000-0000-0000-000000002016"),
+            medicationID: medicationID,
+            scheduledAt: TestDates.date(2026, 1, 10, 8, 0),
+            status: .due
+        )
+        let unrelatedDose = try makeDose(
+            id: uuid("00000000-0000-0000-0000-000000002017"),
+            medicationID: uuid("00000000-0000-0000-0000-000000003017"),
+            scheduledAt: TestDates.date(2026, 1, 10, 8, 0),
+            status: .upcoming
+        )
+
+        try await environment.scheduledDoseRepository.saveScheduledDoses([
+            matchingLaterDose,
+            unrelatedDose,
+            matchingEarlierDose
+        ])
+
+        let fetchedDoses = try await environment.scheduledDoseRepository.fetchScheduledDoses(medicationID: medicationID)
+
+        #expect(fetchedDoses == [matchingEarlierDose, matchingLaterDose])
+    }
+
     private func makeEnvironment() -> CoreDataScheduledDoseRepositoryTestEnvironment {
         let persistenceController = PersistenceController(inMemory: true)
         return CoreDataScheduledDoseRepositoryTestEnvironment(

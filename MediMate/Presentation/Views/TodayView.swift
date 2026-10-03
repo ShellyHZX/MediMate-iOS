@@ -66,40 +66,25 @@ struct TodayView: View {
                 .accessibilityElement(children: .combine)
             }
 
-            if let priorityDose = viewModel.priorityDose {
-                Section("Priority") {
-                    PriorityDoseView(
-                        dose: priorityDose,
-                        isActionInProgress: viewModel.actionInProgressDoseID == priorityDose.id,
-                        markAsTaken: {
-                            await viewModel.markDoseAsTaken(priorityDose)
-                        },
-                        skipDose: {
-                            await viewModel.skipDose(priorityDose)
-                        }
-                    )
-                }
-            } else if viewModel.hasDoses {
-                Section("Priority") {
-                    Label("All doses reviewed for today", systemImage: "checkmark.circle")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 4)
-                }
-            }
-
             Section("Scheduled Today") {
-                ForEach(viewModel.doses) { dose in
-                    TodayDoseRow(
-                        dose: dose,
-                        isActionInProgress: viewModel.actionInProgressDoseID == dose.id,
-                        markAsTaken: {
+                ForEach(viewModel.medicationMoments) { moment in
+                    MedicationMomentView(
+                        moment: moment,
+                        isPriority: viewModel.isPriorityMoment(moment),
+                        isActionInProgress: viewModel.actionInProgressMomentID == moment.id,
+                        markMomentAsTaken: {
+                            await viewModel.markMomentAsTaken(moment)
+                        },
+                        isDoseActionInProgress: { dose in
+                            viewModel.actionInProgressDoseID == dose.id || viewModel.actionInProgressMomentID == moment.id
+                        },
+                        markAsTaken: { dose in
                             await viewModel.markDoseAsTaken(dose)
                         },
-                        skipDose: {
+                        skipDose: { dose in
                             await viewModel.skipDose(dose)
                         },
-                        undoDoseRecord: {
+                        undoDoseRecord: { dose in
                             await viewModel.undoDoseRecord(dose)
                         }
                     )
@@ -146,68 +131,87 @@ struct TodayView: View {
     }
 }
 
-private struct PriorityDoseView: View {
-    let dose: ScheduledDose
+private struct MedicationMomentView: View {
+    let moment: MedicationMoment
+    let isPriority: Bool
     let isActionInProgress: Bool
-    let markAsTaken: () async -> Void
-    let skipDose: () async -> Void
+    let markMomentAsTaken: () async -> Void
+    let isDoseActionInProgress: (ScheduledDose) -> Bool
+    let markAsTaken: (ScheduledDose) async -> Void
+    let skipDose: (ScheduledDose) async -> Void
+    let undoDoseRecord: (ScheduledDose) async -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(TodayDoseFormatter.time(dose.scheduledAt))
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(TodayDoseFormatter.time(moment.scheduledAt))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
 
+                if isPriority {
+                    Text("Current")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+
                 Spacer(minLength: 12)
 
-                StatusLabel(status: dose.status)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(dose.medicationName)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-
-                Text(MedicationPresentationFormatter.dosage(dose.dosage))
-                    .font(.subheadline)
+                Text(TodayDoseFormatter.momentStatus(moment))
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
 
-            if TodayDoseFormatter.isActionable(dose.status) {
-                HStack(spacing: 10) {
-                    Button {
-                        Task {
-                            await markAsTaken()
-                        }
-                    } label: {
-                        if isActionInProgress {
-                            ProgressView()
-                        } else {
-                            Label("Mark as Taken", systemImage: "checkmark.circle")
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(isActionInProgress)
+            Text(TodayDoseFormatter.medicationCount(moment.scheduledMedicationCount))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
 
-                    Button {
-                        Task {
-                            await skipDose()
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(moment.doses) { dose in
+                    MomentDoseRow(
+                        dose: dose,
+                        isActionInProgress: isDoseActionInProgress(dose),
+                        markAsTaken: {
+                            await markAsTaken(dose)
+                        },
+                        skipDose: {
+                            await skipDose(dose)
+                        },
+                        undoDoseRecord: {
+                            await undoDoseRecord(dose)
                         }
-                    } label: {
-                        Label("Skip", systemImage: "minus.circle")
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(isActionInProgress)
+                    )
+                    .accessibilityElement(children: .combine)
                 }
-                .padding(.top, 2)
+            }
+
+            if moment.hasUnresolvedDoses {
+                Button {
+                    Task {
+                        await markMomentAsTaken()
+                    }
+                } label: {
+                    if isActionInProgress {
+                        ProgressView()
+                    } else {
+                        Label(TodayDoseFormatter.batchActionTitle(for: moment), systemImage: "checkmark.circle")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isActionInProgress)
+                .accessibilityLabel(TodayDoseFormatter.batchAccessibilityLabel(for: moment))
+            } else {
+                Label("Moment reviewed", systemImage: "checkmark.circle")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 6)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(TodayDoseFormatter.time(moment.scheduledAt)), \(TodayDoseFormatter.medicationCount(moment.scheduledMedicationCount))")
     }
 }
 
-private struct TodayDoseRow: View {
+private struct MomentDoseRow: View {
     let dose: ScheduledDose
     let isActionInProgress: Bool
     let markAsTaken: () async -> Void
@@ -215,12 +219,7 @@ private struct TodayDoseRow: View {
     let undoDoseRecord: () async -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            Text(TodayDoseFormatter.time(dose.scheduledAt))
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.primary)
-                .frame(minWidth: 72, alignment: .leading)
-
+        HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(dose.medicationName)
                     .font(.body.weight(.medium))
@@ -376,5 +375,39 @@ private enum TodayDoseFormatter {
         case .upcoming, .due, .missed:
             return false
         }
+    }
+
+    static func medicationCount(_ count: Int) -> String {
+        if count == 1 {
+            return "1 medication scheduled"
+        }
+
+        return "\(count) medications scheduled"
+    }
+
+    static func momentStatus(_ moment: MedicationMoment) -> String {
+        let statuses = moment.doses.map(\.status)
+
+        if statuses.contains(.due) || statuses.contains(.missed) {
+            return "Due"
+        }
+
+        if statuses.contains(.upcoming) {
+            return "Upcoming"
+        }
+
+        return "Reviewed"
+    }
+
+    static func batchActionTitle(for moment: MedicationMoment) -> String {
+        if moment.unresolvedDoses.count == moment.doses.count {
+            return "Mark all as taken"
+        }
+
+        return "Mark remaining as taken"
+    }
+
+    static func batchAccessibilityLabel(for moment: MedicationMoment) -> String {
+        "\(batchActionTitle(for: moment)) for \(medicationCount(moment.unresolvedDoses.count)) at \(time(moment.scheduledAt))"
     }
 }

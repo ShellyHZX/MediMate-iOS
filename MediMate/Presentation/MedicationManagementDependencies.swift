@@ -5,30 +5,36 @@ import Foundation
 final class MedicationManagementDependencies: ObservableObject {
     let reviewTodaysMedicationUseCase: ReviewTodaysMedicationUseCase
     let recordDoseAsTakenUseCase: RecordDoseAsTakenUseCase
+    let recordMedicationMomentAsTakenUseCase: RecordMedicationMomentAsTakenUseCase
     let skipScheduledDoseUseCase: SkipScheduledDoseUseCase
     let correctDoseRecordUseCase: CorrectDoseRecordUseCase
     let reviewMedicationsUseCase: ReviewMedicationsUseCase
     let addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase
     let updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase
     let deactivateMedicationUseCase: DeactivateMedicationUseCase
+    let deleteMedicationUseCase: DeleteMedicationUseCase
 
     init(
         reviewTodaysMedicationUseCase: ReviewTodaysMedicationUseCase,
         recordDoseAsTakenUseCase: RecordDoseAsTakenUseCase,
+        recordMedicationMomentAsTakenUseCase: RecordMedicationMomentAsTakenUseCase,
         skipScheduledDoseUseCase: SkipScheduledDoseUseCase,
         correctDoseRecordUseCase: CorrectDoseRecordUseCase,
         reviewMedicationsUseCase: ReviewMedicationsUseCase,
         addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase,
         updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase,
-        deactivateMedicationUseCase: DeactivateMedicationUseCase
+        deactivateMedicationUseCase: DeactivateMedicationUseCase,
+        deleteMedicationUseCase: DeleteMedicationUseCase
     ) {
         self.reviewTodaysMedicationUseCase = reviewTodaysMedicationUseCase
         self.recordDoseAsTakenUseCase = recordDoseAsTakenUseCase
+        self.recordMedicationMomentAsTakenUseCase = recordMedicationMomentAsTakenUseCase
         self.skipScheduledDoseUseCase = skipScheduledDoseUseCase
         self.correctDoseRecordUseCase = correctDoseRecordUseCase
         self.reviewMedicationsUseCase = reviewMedicationsUseCase
         self.addMedicationAndScheduleUseCase = addMedicationAndScheduleUseCase
         self.updateMedicationAndRescheduleUseCase = updateMedicationAndRescheduleUseCase
         self.deactivateMedicationUseCase = deactivateMedicationUseCase
+        self.deleteMedicationUseCase = deleteMedicationUseCase
     }
 }

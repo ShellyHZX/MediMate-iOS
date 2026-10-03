@@ -12,10 +12,12 @@ final class MockMedicationRepository: MedicationRepository {
     var fetchAllMedicationsError: Error?
     var fetchMedicationError: Error?
     var saveMedicationError: Error?
+    var deleteMedicationError: Error?
 
     private(set) var fetchedAllMedicationsCount = 0
     private(set) var fetchedMedicationIDs: [UUID] = []
     private(set) var savedMedications: [Medication] = []
+    private(set) var deletedMedicationIDs: [UUID] = []
 
     func fetchAllMedications() async throws -> [Medication] {
         fetchedAllMedicationsCount += 1
@@ -44,5 +46,16 @@ final class MockMedicationRepository: MedicationRepository {
 
         savedMedications.append(medication)
         medicationByID[medication.id] = medication
+    }
+
+    func deleteMedication(id: UUID) async throws {
+        deletedMedicationIDs.append(id)
+
+        if let deleteMedicationError {
+            throw deleteMedicationError
+        }
+
+        medicationByID.removeValue(forKey: id)
+        medications.removeAll { $0.id == id }
     }
 }

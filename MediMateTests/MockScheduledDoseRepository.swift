@@ -10,12 +10,14 @@ final class MockScheduledDoseRepository: ScheduledDoseRepository {
     var scheduledDosesInRange: [ScheduledDose] = []
 
     var fetchScheduledDoseError: Error?
+    var fetchMedicationScheduledDosesError: Error?
     var fetchScheduledDosesError: Error?
     var saveScheduledDoseError: Error?
     var saveScheduledDosesError: Error?
     var deleteScheduledDosesError: Error?
 
     private(set) var fetchedScheduledDoseIDs: [UUID] = []
+    private(set) var fetchedScheduledDoseMedicationIDs: [UUID] = []
     private(set) var fetchedRangeRequests: [(startDate: Date, endDate: Date)] = []
     private(set) var savedScheduledDoses: [ScheduledDose] = []
     private(set) var batchSavedScheduledDoses: [[ScheduledDose]] = []
@@ -29,6 +31,24 @@ final class MockScheduledDoseRepository: ScheduledDoseRepository {
         }
 
         return scheduledDoseByID[id]
+    }
+
+    func fetchScheduledDoses(medicationID: UUID) async throws -> [ScheduledDose] {
+        fetchedScheduledDoseMedicationIDs.append(medicationID)
+
+        if let fetchMedicationScheduledDosesError {
+            throw fetchMedicationScheduledDosesError
+        }
+
+        return scheduledDosesInRange
+            .filter { $0.medicationID == medicationID }
+            .sorted {
+                if $0.scheduledAt == $1.scheduledAt {
+                    return $0.id.uuidString < $1.id.uuidString
+                }
+
+                return $0.scheduledAt < $1.scheduledAt
+            }
     }
 
     func fetchScheduledDoses(from startDate: Date, to endDate: Date) async throws -> [ScheduledDose] {

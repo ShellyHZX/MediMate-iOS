@@ -146,6 +146,37 @@ struct CoreDataMedicationRepositoryTests {
         ])
     }
 
+    @Test func deleteMedicationRemovesMedicationAndIgnoresUnknownID() async throws {
+        let environment = makeEnvironment()
+        let deletedMedication = try makeMedication(
+            id: uuid("00000000-0000-0000-0000-000000001009"),
+            name: "Delete Me",
+            dosage: Dosage(amount: 1, unit: .tablet),
+            instructions: nil,
+            doseTimes: [(8, 0)],
+            createdAt: TestDates.date(2026, 1, 1, 9, 0)
+        )
+        let keptMedication = try makeMedication(
+            id: uuid("00000000-0000-0000-0000-000000001010"),
+            name: "Keep Me",
+            dosage: Dosage(amount: 1, unit: .tablet),
+            instructions: nil,
+            doseTimes: [(9, 0)],
+            createdAt: TestDates.date(2026, 1, 2, 9, 0)
+        )
+
+        try await environment.repository.saveMedication(deletedMedication)
+        try await environment.repository.saveMedication(keptMedication)
+        try await environment.repository.deleteMedication(id: deletedMedication.id)
+        try await environment.repository.deleteMedication(id: uuid("00000000-0000-0000-0000-000000001099"))
+
+        let deletedFetchResult = try await environment.repository.fetchMedication(id: deletedMedication.id)
+        let keptFetchResult = try await environment.repository.fetchMedication(id: keptMedication.id)
+
+        #expect(deletedFetchResult == nil)
+        #expect(keptFetchResult == keptMedication)
+    }
+
     private func makeEnvironment() -> CoreDataMedicationRepositoryTestEnvironment {
         let persistenceController = PersistenceController(inMemory: true)
         return CoreDataMedicationRepositoryTestEnvironment(

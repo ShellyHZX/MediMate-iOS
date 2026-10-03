@@ -17,12 +17,14 @@ final class MedicationFormViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published private(set) var savedMedication: Medication?
     @Published private(set) var deactivatedMedication: Medication?
+    @Published private(set) var didDeleteMedication: Bool
 
     let mode: Mode
 
     private let addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase
     private let updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase
     private let deactivateMedicationUseCase: DeactivateMedicationUseCase
+    private let deleteMedicationUseCase: DeleteMedicationUseCase
 
     var isAddMode: Bool {
         if case .add = mode {
@@ -40,20 +42,27 @@ final class MedicationFormViewModel: ObservableObject {
         isEditMode
     }
 
+    var isDeletionAvailable: Bool {
+        isEditMode
+    }
+
     init(
         mode: Mode,
         addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase,
         updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase,
-        deactivateMedicationUseCase: DeactivateMedicationUseCase
+        deactivateMedicationUseCase: DeactivateMedicationUseCase,
+        deleteMedicationUseCase: DeleteMedicationUseCase
     ) {
         self.mode = mode
         self.addMedicationAndScheduleUseCase = addMedicationAndScheduleUseCase
         self.updateMedicationAndRescheduleUseCase = updateMedicationAndRescheduleUseCase
         self.deactivateMedicationUseCase = deactivateMedicationUseCase
+        self.deleteMedicationUseCase = deleteMedicationUseCase
         self.isSaving = false
         self.errorMessage = nil
         self.savedMedication = nil
         self.deactivatedMedication = nil
+        self.didDeleteMedication = false
 
         switch mode {
         case .add:
@@ -85,6 +94,7 @@ final class MedicationFormViewModel: ObservableObject {
         isSaving = true
         errorMessage = nil
         savedMedication = nil
+        didDeleteMedication = false
 
         defer {
             isSaving = false
@@ -149,6 +159,7 @@ final class MedicationFormViewModel: ObservableObject {
         isSaving = true
         errorMessage = nil
         deactivatedMedication = nil
+        didDeleteMedication = false
 
         defer {
             isSaving = false
@@ -164,6 +175,36 @@ final class MedicationFormViewModel: ObservableObject {
         } catch {
             errorMessage = "We couldn't save this medication. Please try again."
             return nil
+        }
+    }
+
+    func deleteMedication() async -> Bool {
+        guard !isSaving else {
+            return false
+        }
+
+        guard case .edit(let medication) = mode else {
+            return false
+        }
+
+        isSaving = true
+        errorMessage = nil
+        didDeleteMedication = false
+
+        defer {
+            isSaving = false
+        }
+
+        do {
+            try await deleteMedicationUseCase.execute(medicationID: medication.id)
+            didDeleteMedication = true
+            return true
+        } catch let error as DeleteMedicationUseCaseError {
+            errorMessage = mapError(error)
+            return false
+        } catch {
+            errorMessage = "We couldn't delete this medication. Please try again."
+            return false
         }
     }
 
@@ -257,6 +298,19 @@ final class MedicationFormViewModel: ObservableObject {
             return "This medication is already inactive."
         case .persistenceFailure:
             return "We couldn't save this medication. Please try again."
+        }
+    }
+
+    private func mapError(_ error: DeleteMedicationUseCaseError) -> String {
+        switch error {
+        case .medicationNotFound:
+            return "This medication is no longer available."
+        case .recordedHistoryExists:
+            return "This medication has recorded dose history, so it can't be permanently deleted. Deactivate it instead to keep those records."
+        case .fetchScheduledDosesFailure,
+             .deleteScheduledDosesFailure,
+             .deleteMedicationFailure:
+            return "We couldn't delete this medication. Please try again."
         }
     }
 }

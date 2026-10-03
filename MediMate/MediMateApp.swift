@@ -17,6 +17,9 @@ struct MediMateApp: App {
         let recordDoseAsTakenUseCase = RecordDoseAsTakenUseCase(
             scheduledDoseRepository: scheduledDoseRepository
         )
+        let recordMedicationMomentAsTakenUseCase = RecordMedicationMomentAsTakenUseCase(
+            scheduledDoseRepository: scheduledDoseRepository
+        )
         let skipScheduledDoseUseCase = SkipScheduledDoseUseCase(
             scheduledDoseRepository: scheduledDoseRepository
         )
@@ -43,18 +46,24 @@ struct MediMateApp: App {
             calendar: calendar
         )
         let deactivateMedicationUseCase = DeactivateMedicationUseCase(medicationRepository: medicationRepository)
+        let deleteMedicationUseCase = DeleteMedicationUseCase(
+            medicationRepository: medicationRepository,
+            scheduledDoseRepository: scheduledDoseRepository
+        )
 
         self.persistenceController = persistenceController
         _medicationManagementDependencies = StateObject(
             wrappedValue: MedicationManagementDependencies(
                 reviewTodaysMedicationUseCase: reviewTodaysMedicationUseCase,
                 recordDoseAsTakenUseCase: recordDoseAsTakenUseCase,
+                recordMedicationMomentAsTakenUseCase: recordMedicationMomentAsTakenUseCase,
                 skipScheduledDoseUseCase: skipScheduledDoseUseCase,
                 correctDoseRecordUseCase: correctDoseRecordUseCase,
                 reviewMedicationsUseCase: reviewMedicationsUseCase,
                 addMedicationAndScheduleUseCase: addMedicationAndScheduleUseCase,
                 updateMedicationAndRescheduleUseCase: updateMedicationAndRescheduleUseCase,
-                deactivateMedicationUseCase: deactivateMedicationUseCase
+                deactivateMedicationUseCase: deactivateMedicationUseCase,
+                deleteMedicationUseCase: deleteMedicationUseCase
             )
         )
     }

@@ -349,6 +349,74 @@ struct MedicationFormViewModelDeactivationTests {
 }
 
 @MainActor
+struct MedicationFormViewModelDeletionTests {
+    @Test func deletionIsUnavailableInAddMode() async {
+        let repository = MockMedicationRepository()
+        let viewModel = makeAddFormViewModel(repository: repository)
+
+        let didDelete = await viewModel.deleteMedication()
+
+        #expect(!viewModel.isDeletionAvailable)
+        #expect(!didDelete)
+        #expect(repository.deletedMedicationIDs.isEmpty)
+    }
+
+    @Test func recordedHistoryDeleteFailureMapsToGuidance() async throws {
+        let repository = MockMedicationRepository()
+        let scheduledDoseRepository = MockScheduledDoseRepository()
+        let medication = try makeMedication(id: uuid("00000000-0000-0000-0000-000000005401"))
+        let takenDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-0000000054A1"),
+            medicationID: medication.id,
+            scheduledAt: TestDates.date(2026, 3, 1, 8, 0),
+            status: .taken
+        )
+        repository.medicationByID[medication.id] = medication
+        scheduledDoseRepository.scheduledDosesInRange = [takenDose]
+        let viewModel = makeEditFormViewModel(
+            repository: repository,
+            medication: medication,
+            scheduledDoseRepository: scheduledDoseRepository
+        )
+
+        let didDelete = await viewModel.deleteMedication()
+
+        #expect(!didDelete)
+        #expect(viewModel.errorMessage == "This medication has recorded dose history, so it can't be permanently deleted. Deactivate it instead to keep those records.")
+        #expect(repository.deletedMedicationIDs.isEmpty)
+        #expect(scheduledDoseRepository.deletedScheduledDoseIDs.isEmpty)
+        #expect(!viewModel.isSaving)
+    }
+
+    @Test func editMedicationWithoutHistoryCanBeDeleted() async throws {
+        let repository = MockMedicationRepository()
+        let scheduledDoseRepository = MockScheduledDoseRepository()
+        let medication = try makeMedication(id: uuid("00000000-0000-0000-0000-000000005402"))
+        let upcomingDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-0000000054B1"),
+            medicationID: medication.id,
+            scheduledAt: TestDates.date(2026, 3, 1, 8, 0),
+            status: .upcoming
+        )
+        repository.medicationByID[medication.id] = medication
+        scheduledDoseRepository.scheduledDosesInRange = [upcomingDose]
+        let viewModel = makeEditFormViewModel(
+            repository: repository,
+            medication: medication,
+            scheduledDoseRepository: scheduledDoseRepository
+        )
+
+        let didDelete = await viewModel.deleteMedication()
+
+        #expect(didDelete)
+        #expect(viewModel.didDeleteMedication)
+        #expect(repository.deletedMedicationIDs == [medication.id])
+        #expect(scheduledDoseRepository.deletedScheduledDoseIDs == [[upcomingDose.id]])
+        #expect(!viewModel.isSaving)
+    }
+}
+
+@MainActor
 private func makeListViewModel(repository: MockMedicationRepository) -> MedicationListViewModel {
     MedicationListViewModel(
         reviewMedicationsUseCase: ReviewMedicationsUseCase(medicationRepository: repository)
@@ -388,7 +456,11 @@ private func makeAddFormViewModel(
             calendar: TestDates.calendar,
             referenceDateProvider: referenceDateProvider
         ),
-        deactivateMedicationUseCase: DeactivateMedicationUseCase(medicationRepository: repository)
+        deactivateMedicationUseCase: DeactivateMedicationUseCase(medicationRepository: repository),
+        deleteMedicationUseCase: DeleteMedicationUseCase(
+            medicationRepository: repository,
+            scheduledDoseRepository: scheduledDoseRepository
+        )
     )
 }
 
@@ -411,9 +483,9 @@ private func makeValidAddFormViewModel(
 @MainActor
 private func makeEditFormViewModel(
     repository: MockMedicationRepository,
-    medication: Medication
+    medication: Medication,
+    scheduledDoseRepository: MockScheduledDoseRepository = MockScheduledDoseRepository()
 ) -> MedicationFormViewModel {
-    let scheduledDoseRepository = MockScheduledDoseRepository()
     let addMedicationUseCase = AddMedicationUseCase(medicationRepository: repository)
     let scheduleMedicationUseCase = ScheduleMedicationUseCase(
         scheduledDoseRepository: scheduledDoseRepository,
@@ -434,7 +506,11 @@ private func makeEditFormViewModel(
             calendar: TestDates.calendar,
             referenceDateProvider: { TestDates.date(2026, 3, 1, 12, 0) }
         ),
-        deactivateMedicationUseCase: DeactivateMedicationUseCase(medicationRepository: repository)
+        deactivateMedicationUseCase: DeactivateMedicationUseCase(medicationRepository: repository),
+        deleteMedicationUseCase: DeleteMedicationUseCase(
+            medicationRepository: repository,
+            scheduledDoseRepository: scheduledDoseRepository
+        )
     )
 }
 

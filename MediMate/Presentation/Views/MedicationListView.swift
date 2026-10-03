@@ -130,7 +130,8 @@ struct MedicationListView: View {
                 mode: .add,
                 addMedicationAndScheduleUseCase: dependencies.addMedicationAndScheduleUseCase,
                 updateMedicationAndRescheduleUseCase: dependencies.updateMedicationAndRescheduleUseCase,
-                deactivateMedicationUseCase: dependencies.deactivateMedicationUseCase
+                deactivateMedicationUseCase: dependencies.deactivateMedicationUseCase,
+                deleteMedicationUseCase: dependencies.deleteMedicationUseCase
             )
         ) { _ in
             Task {

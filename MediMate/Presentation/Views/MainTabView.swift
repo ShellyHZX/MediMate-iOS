@@ -8,6 +8,7 @@ struct MainTabView: View {
             TodayTabView(
                 reviewTodaysMedicationUseCase: dependencies.reviewTodaysMedicationUseCase,
                 recordDoseAsTakenUseCase: dependencies.recordDoseAsTakenUseCase,
+                recordMedicationMomentAsTakenUseCase: dependencies.recordMedicationMomentAsTakenUseCase,
                 skipScheduledDoseUseCase: dependencies.skipScheduledDoseUseCase,
                 correctDoseRecordUseCase: dependencies.correctDoseRecordUseCase
             )

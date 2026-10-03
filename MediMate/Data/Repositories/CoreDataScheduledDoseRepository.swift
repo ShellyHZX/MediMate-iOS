@@ -22,6 +22,27 @@ struct CoreDataScheduledDoseRepository: ScheduledDoseRepository {
         }
     }
 
+    func fetchScheduledDoses(medicationID: UUID) async throws -> [ScheduledDose] {
+        try await context.perform {
+            let request = ScheduledDoseEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "medicationID == %@", medicationID as CVarArg)
+            request.sortDescriptors = [
+                NSSortDescriptor(key: "scheduledAt", ascending: true)
+            ]
+
+            let scheduledDoseEntities = try context.fetch(request)
+            let scheduledDoses = try scheduledDoseEntities.map { try $0.toDomainScheduledDose() }
+
+            return scheduledDoses.sorted {
+                if $0.scheduledAt == $1.scheduledAt {
+                    return $0.id.uuidString < $1.id.uuidString
+                }
+
+                return $0.scheduledAt < $1.scheduledAt
+            }
+        }
+    }
+
     func fetchScheduledDoses(from startDate: Date, to endDate: Date) async throws -> [ScheduledDose] {
         try await context.perform {
             let request = ScheduledDoseEntity.fetchRequest()

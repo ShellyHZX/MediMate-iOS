@@ -6,13 +6,16 @@ final class TodayViewModel: ObservableObject {
     @Published private(set) var summary: DailyMedicationSummary?
     @Published private(set) var isLoading: Bool
     @Published private(set) var actionInProgressDoseID: UUID?
+    @Published private(set) var actionInProgressMomentID: Date?
     @Published var errorMessage: String?
     @Published var actionErrorMessage: String?
 
     private let reviewTodaysMedicationUseCase: ReviewTodaysMedicationUseCase
     private let recordDoseAsTakenUseCase: RecordDoseAsTakenUseCase
+    private let recordMedicationMomentAsTakenUseCase: RecordMedicationMomentAsTakenUseCase
     private let skipScheduledDoseUseCase: SkipScheduledDoseUseCase
     private let correctDoseRecordUseCase: CorrectDoseRecordUseCase
+    private let calendar: Calendar
     private let referenceDateProvider: () -> Date
     private let actionDateProvider: () -> Date
 
@@ -32,6 +35,40 @@ final class TodayViewModel: ObservableObject {
         summary?.priorityDose
     }
 
+    var medicationMoments: [MedicationMoment] {
+        var dosesByMoment: [Date: [ScheduledDose]] = [:]
+
+        for dose in doses {
+            let momentDate = calendarMinute(for: dose.scheduledAt)
+            dosesByMoment[momentDate, default: []].append(dose)
+        }
+
+        return dosesByMoment
+            .map { scheduledAt, doses in
+                MedicationMoment(
+                    scheduledAt: scheduledAt,
+                    doses: doses.sorted {
+                        if $0.medicationName == $1.medicationName {
+                            return $0.id.uuidString < $1.id.uuidString
+                        }
+
+                        return $0.medicationName.localizedStandardCompare($1.medicationName) == .orderedAscending
+                    }
+                )
+            }
+            .sorted { $0.scheduledAt < $1.scheduledAt }
+    }
+
+    var priorityMoment: MedicationMoment? {
+        guard let priorityDose else {
+            return nil
+        }
+
+        return medicationMoments.first { moment in
+            moment.doses.contains { $0.id == priorityDose.id }
+        }
+    }
+
     var hasDoses: Bool {
         !doses.isEmpty
     }
@@ -39,24 +76,30 @@ final class TodayViewModel: ObservableObject {
     init(
         reviewTodaysMedicationUseCase: ReviewTodaysMedicationUseCase,
         recordDoseAsTakenUseCase: RecordDoseAsTakenUseCase,
+        recordMedicationMomentAsTakenUseCase: RecordMedicationMomentAsTakenUseCase,
         skipScheduledDoseUseCase: SkipScheduledDoseUseCase,
         correctDoseRecordUseCase: CorrectDoseRecordUseCase,
+        calendar: Calendar,
         referenceDateProvider: @escaping () -> Date = Date.init,
         actionDateProvider: @escaping () -> Date = Date.init,
         summary: DailyMedicationSummary? = nil,
         isLoading: Bool = false,
         actionInProgressDoseID: UUID? = nil,
+        actionInProgressMomentID: Date? = nil,
         errorMessage: String? = nil
     ) {
         self.reviewTodaysMedicationUseCase = reviewTodaysMedicationUseCase
         self.recordDoseAsTakenUseCase = recordDoseAsTakenUseCase
+        self.recordMedicationMomentAsTakenUseCase = recordMedicationMomentAsTakenUseCase
         self.skipScheduledDoseUseCase = skipScheduledDoseUseCase
         self.correctDoseRecordUseCase = correctDoseRecordUseCase
+        self.calendar = calendar
         self.referenceDateProvider = referenceDateProvider
         self.actionDateProvider = actionDateProvider
         self.summary = summary
         self.isLoading = isLoading
         self.actionInProgressDoseID = actionInProgressDoseID
+        self.actionInProgressMomentID = actionInProgressMomentID
         self.errorMessage = errorMessage
         self.actionErrorMessage = nil
     }
@@ -87,7 +130,7 @@ final class TodayViewModel: ObservableObject {
     }
 
     func markDoseAsTaken(_ dose: ScheduledDose) async {
-        guard actionInProgressDoseID == nil else {
+        guard actionInProgressDoseID == nil, actionInProgressMomentID == nil else {
             return
         }
 
@@ -112,7 +155,7 @@ final class TodayViewModel: ObservableObject {
     }
 
     func skipDose(_ dose: ScheduledDose) async {
-        guard actionInProgressDoseID == nil else {
+        guard actionInProgressDoseID == nil, actionInProgressMomentID == nil else {
             return
         }
 
@@ -134,7 +177,7 @@ final class TodayViewModel: ObservableObject {
     }
 
     func undoDoseRecord(_ dose: ScheduledDose) async {
-        guard actionInProgressDoseID == nil else {
+        guard actionInProgressDoseID == nil, actionInProgressMomentID == nil else {
             return
         }
 
@@ -157,6 +200,41 @@ final class TodayViewModel: ObservableObject {
         } catch {
             actionErrorMessage = "We couldn't correct this dose. Please try again."
         }
+    }
+
+    func markMomentAsTaken(_ moment: MedicationMoment) async {
+        guard actionInProgressDoseID == nil, actionInProgressMomentID == nil else {
+            return
+        }
+
+        let unresolvedDoses = moment.unresolvedDoses
+
+        guard !unresolvedDoses.isEmpty else {
+            return
+        }
+
+        actionInProgressMomentID = moment.id
+        actionErrorMessage = nil
+
+        defer {
+            actionInProgressMomentID = nil
+        }
+
+        do {
+            _ = try await recordMedicationMomentAsTakenUseCase.execute(
+                scheduledDoseIDs: unresolvedDoses.map(\.id),
+                takenAt: actionDateProvider()
+            )
+            await loadToday()
+        } catch let error as RecordMedicationMomentAsTakenUseCaseError {
+            actionErrorMessage = mapError(error)
+        } catch {
+            actionErrorMessage = "We couldn't update these doses. Please try again."
+        }
+    }
+
+    func isPriorityMoment(_ moment: MedicationMoment) -> Bool {
+        priorityMoment?.id == moment.id
     }
 
     private func mapError(_ error: ReviewTodaysMedicationUseCaseError) -> String {
@@ -201,5 +279,25 @@ final class TodayViewModel: ObservableObject {
         case .persistenceFailure:
             return "We couldn't correct this dose. Please try again."
         }
+    }
+
+    private func mapError(_ error: RecordMedicationMomentAsTakenUseCaseError) -> String {
+        switch error {
+        case .emptyDoseSelection:
+            return "There are no doses to mark as taken."
+        case .doseNotFound:
+            return "One of these doses is no longer available."
+        case .doseAlreadyTaken:
+            return "One of these doses is already marked as taken."
+        case .doseWasSkipped:
+            return "One of these doses was already skipped."
+        case .persistenceFailure:
+            return "We couldn't update these doses. Please try again."
+        }
+    }
+
+    private func calendarMinute(for date: Date) -> Date {
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        return calendar.date(from: components) ?? date
     }
 }

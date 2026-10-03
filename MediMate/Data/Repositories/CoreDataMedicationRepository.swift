@@ -49,6 +49,20 @@ struct CoreDataMedicationRepository: MedicationRepository {
         }
     }
 
+    func deleteMedication(id: UUID) async throws {
+        try await context.perform {
+            guard let medicationEntity = try fetchMedicationEntity(id: id) else {
+                return
+            }
+
+            context.delete(medicationEntity)
+
+            if context.hasChanges {
+                try context.save()
+            }
+        }
+    }
+
     private func fetchMedicationEntity(id: UUID) throws -> MedicationEntity? {
         let request = MedicationEntity.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
