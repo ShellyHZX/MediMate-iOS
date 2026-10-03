@@ -97,12 +97,125 @@ struct HistoryViewModelTests {
         #expect(viewModel.errorMessage == nil)
     }
 
+    @Test func activityExcludesUnresolvedDueAndUpcomingDoses() async throws {
+        let repository = MockScheduledDoseRepository()
+        let takenDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000009901"),
+            scheduledAt: TestDates.date(2026, 5, 20, 8, 0),
+            status: .taken
+        )
+        let dueDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000009902"),
+            scheduledAt: TestDates.date(2026, 5, 20, 9, 0),
+            status: .due
+        )
+        let upcomingDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000009903"),
+            scheduledAt: TestDates.date(2026, 5, 20, 16, 0),
+            status: .upcoming
+        )
+        repository.scheduledDosesInRange = [takenDose, dueDose, upcomingDose]
+        let viewModel = makeViewModel(repository: repository)
+
+        await viewModel.loadHistory()
+
+        #expect(viewModel.activityDaySections.flatMap(\.moments).flatMap(\.doses).map(\.id) == [takenDose.id])
+    }
+
+    @Test func sameMinuteFinalizedDosesGroupIntoOneActivityMoment() async throws {
+        let repository = MockScheduledDoseRepository()
+        let firstDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000009A01"),
+            medicationName: "Beta",
+            scheduledAt: TestDates.date(2026, 5, 20, 12, 0),
+            status: .taken
+        )
+        let secondDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000009A02"),
+            medicationName: "Alpha",
+            scheduledAt: TestDates.date(2026, 5, 20, 12, 0),
+            status: .skipped
+        )
+        repository.scheduledDosesInRange = [firstDose, secondDose]
+        let viewModel = makeViewModel(repository: repository)
+
+        await viewModel.loadHistory()
+
+        let moments = try #require(viewModel.activityDaySections.first?.moments)
+        #expect(moments.count == 1)
+        #expect(moments.first?.scheduledAt == TestDates.date(2026, 5, 20, 12, 0))
+        #expect(moments.first?.doses.map(\.id) == [secondDose.id, firstDose.id])
+    }
+
+    @Test func differentMinutesRemainSeparateNewestFirstAndSummaryCountsStatuses() async throws {
+        let repository = MockScheduledDoseRepository()
+        let skippedDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000009B01"),
+            scheduledAt: TestDates.date(2026, 5, 20, 8, 0),
+            status: .skipped
+        )
+        let missedDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000009B02"),
+            scheduledAt: TestDates.date(2026, 5, 20, 12, 0),
+            status: .missed
+        )
+        let takenDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000009B03"),
+            scheduledAt: TestDates.date(2026, 5, 20, 12, 0),
+            status: .taken
+        )
+        repository.scheduledDosesInRange = [skippedDose, missedDose, takenDose]
+        let viewModel = makeViewModel(repository: repository)
+
+        await viewModel.loadHistory()
+
+        let moments = try #require(viewModel.activityDaySections.first?.moments)
+        #expect(moments.map(\.scheduledAt) == [
+            TestDates.date(2026, 5, 20, 12, 0),
+            TestDates.date(2026, 5, 20, 8, 0)
+        ])
+        #expect(moments.first?.summary == "1 taken · 1 missed")
+        #expect(moments.last?.summary == "1 skipped")
+    }
+
+    @Test func correctionToNotTakenPersistsAndReloadsActivity() async throws {
+        let repository = MockScheduledDoseRepository()
+        let takenDose = try makeScheduledDose(
+            id: uuid("00000000-0000-0000-0000-000000009C01"),
+            scheduledAt: TestDates.date(2026, 5, 20, 8, 0),
+            status: .taken,
+            takenAt: TestDates.date(2026, 5, 20, 8, 5)
+        )
+        repository.scheduledDoseByID[takenDose.id] = takenDose
+        repository.scheduledDosesInRange = [takenDose]
+        let viewModel = makeViewModel(
+            repository: repository,
+            referenceDate: TestDates.date(2026, 5, 20, 14, 30)
+        )
+
+        await viewModel.loadHistory()
+        let record = try #require(viewModel.activityDaySections.first?.moments.first?.doses.first)
+        await viewModel.markRecordAsNotTaken(record)
+
+        #expect(repository.fetchedScheduledDoseIDs == [takenDose.id])
+        #expect(repository.savedScheduledDoses.first?.status == .due)
+        #expect(repository.savedScheduledDoses.first?.takenAt == nil)
+        #expect(repository.fetchedRangeRequests.count == 2)
+        #expect(viewModel.activityDaySections.isEmpty)
+        #expect(viewModel.actionInProgressDoseID == nil)
+        #expect(viewModel.correctionErrorMessage == nil)
+    }
+
     private func makeViewModel(
         repository: MockScheduledDoseRepository,
         referenceDate: Date = TestDates.date(2026, 5, 30, 14, 30)
     ) -> HistoryViewModel {
         HistoryViewModel(
             reviewMedicationHistoryUseCase: ReviewMedicationHistoryUseCase(
+                scheduledDoseRepository: repository,
+                calendar: TestDates.calendar
+            ),
+            correctDoseRecordUseCase: CorrectDoseRecordUseCase(
                 scheduledDoseRepository: repository,
                 calendar: TestDates.calendar
             ),

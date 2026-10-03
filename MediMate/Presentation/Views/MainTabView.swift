@@ -21,31 +21,13 @@ struct MainTabView: View {
                     Label("Medications", systemImage: "pills")
                 }
 
-            PlaceholderTabView(
-                title: "History",
-                systemImage: "clock.arrow.circlepath",
-                message: "Dose history will appear here."
+            ActivityTabView(
+                reviewMedicationHistoryUseCase: dependencies.reviewMedicationHistoryUseCase,
+                correctDoseRecordUseCase: dependencies.correctDoseRecordUseCase
             )
             .tabItem {
-                Label("History", systemImage: "clock.arrow.circlepath")
+                Label("Activity", systemImage: "clock.badge.checkmark")
             }
-        }
-    }
-}
-
-private struct PlaceholderTabView: View {
-    let title: String
-    let systemImage: String
-    let message: String
-
-    var body: some View {
-        NavigationStack {
-            ContentUnavailableView {
-                Label(title, systemImage: systemImage)
-            } description: {
-                Text(message)
-            }
-            .navigationTitle(title)
         }
     }
 }

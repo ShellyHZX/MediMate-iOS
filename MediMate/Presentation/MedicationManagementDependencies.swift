@@ -8,6 +8,7 @@ final class MedicationManagementDependencies: ObservableObject {
     let recordMedicationMomentAsTakenUseCase: RecordMedicationMomentAsTakenUseCase
     let skipScheduledDoseUseCase: SkipScheduledDoseUseCase
     let correctDoseRecordUseCase: CorrectDoseRecordUseCase
+    let reviewMedicationHistoryUseCase: ReviewMedicationHistoryUseCase
     let reviewMedicationsUseCase: ReviewMedicationsUseCase
     let addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase
     let updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase
@@ -20,6 +21,7 @@ final class MedicationManagementDependencies: ObservableObject {
         recordMedicationMomentAsTakenUseCase: RecordMedicationMomentAsTakenUseCase,
         skipScheduledDoseUseCase: SkipScheduledDoseUseCase,
         correctDoseRecordUseCase: CorrectDoseRecordUseCase,
+        reviewMedicationHistoryUseCase: ReviewMedicationHistoryUseCase,
         reviewMedicationsUseCase: ReviewMedicationsUseCase,
         addMedicationAndScheduleUseCase: AddMedicationAndScheduleUseCase,
         updateMedicationAndRescheduleUseCase: UpdateMedicationAndRescheduleUseCase,
@@ -31,6 +33,7 @@ final class MedicationManagementDependencies: ObservableObject {
         self.recordMedicationMomentAsTakenUseCase = recordMedicationMomentAsTakenUseCase
         self.skipScheduledDoseUseCase = skipScheduledDoseUseCase
         self.correctDoseRecordUseCase = correctDoseRecordUseCase
+        self.reviewMedicationHistoryUseCase = reviewMedicationHistoryUseCase
         self.reviewMedicationsUseCase = reviewMedicationsUseCase
         self.addMedicationAndScheduleUseCase = addMedicationAndScheduleUseCase
         self.updateMedicationAndRescheduleUseCase = updateMedicationAndRescheduleUseCase
