@@ -52,7 +52,7 @@ struct ActivityView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(MediMateTheme.background)
         .overlay(alignment: .top) {
             if viewModel.isLoading {
                 ProgressView()
@@ -63,29 +63,28 @@ struct ActivityView: View {
     }
 
     private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No activity yet", systemImage: "clock.badge.checkmark")
-        } description: {
-            Text("Your recorded medication activity will appear here.")
-        }
+        MediMateEmptyState(
+            title: "No activity yet",
+            message: "Recorded medication activity will appear here.",
+            systemImage: "clock.badge.checkmark"
+        )
         .refreshable {
             await viewModel.loadHistory()
         }
     }
 
     private func errorState(message: String) -> some View {
-        ContentUnavailableView {
-            Label("Unable to load activity", systemImage: "exclamationmark.circle")
-        } description: {
-            Text(message)
-        } actions: {
-            Button("Retry") {
+        MediMateEmptyState(
+            title: "Unable to load activity",
+            message: message,
+            systemImage: "exclamationmark.circle",
+            actionTitle: "Retry",
+            action: {
                 Task {
                     await viewModel.retry()
                 }
             }
-            .buttonStyle(.borderedProminent)
-        }
+        )
     }
 }
 
@@ -99,13 +98,13 @@ private struct ActivityMessageView: View {
             if let loadMessage {
                 Text(loadMessage)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(MediMateTheme.secondaryText)
             }
 
             if let correctionMessage {
                 Text(correctionMessage)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(MediMateTheme.secondaryText)
             }
 
             if loadMessage != nil {
@@ -118,7 +117,7 @@ private struct ActivityMessageView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        .background(MediMateTheme.surface, in: RoundedRectangle(cornerRadius: MediMateTheme.compactCornerRadius))
     }
 }
 
@@ -132,7 +131,7 @@ private struct ActivityDayView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.headline)
-                .foregroundStyle(.primary)
+                .foregroundStyle(MediMateTheme.primaryText)
                 .accessibilityAddTraits(.isHeader)
 
             VStack(alignment: .leading, spacing: 0) {
@@ -149,7 +148,11 @@ private struct ActivityDayView: View {
                     }
                 }
             }
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+            .background(MediMateTheme.surface, in: RoundedRectangle(cornerRadius: MediMateTheme.cornerRadius))
+            .overlay {
+                RoundedRectangle(cornerRadius: MediMateTheme.cornerRadius)
+                    .stroke(MediMateTheme.border, lineWidth: 1)
+            }
         }
         .accessibilityElement(children: .contain)
     }
@@ -163,21 +166,28 @@ private struct ActivityMomentView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(ActivityFormatter.time(moment.scheduledAt))
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.primary)
+                HStack(alignment: .top, spacing: 10) {
+                    Circle()
+                        .fill(MediMateTheme.accent)
+                        .frame(width: 9, height: 9)
+                        .padding(.top, 8)
+
+                    Text(ActivityFormatter.time(moment.scheduledAt))
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(MediMateTheme.primaryText)
+                }
 
                 Spacer(minLength: 12)
 
                 Text(moment.summary)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(MediMateTheme.secondaryText)
                     .multilineTextAlignment(.trailing)
             }
 
             Text(ActivityFormatter.recordCount(moment.recordCount))
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(MediMateTheme.secondaryText)
 
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(moment.doses) { dose in
@@ -213,16 +223,16 @@ private struct ActivityDoseRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(dose.medicationName)
                     .font(.body.weight(.medium))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(MediMateTheme.primaryText)
 
                 Text(MedicationPresentationFormatter.dosage(dose.dosage))
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(MediMateTheme.secondaryText)
             }
 
             Spacer(minLength: 8)
 
-            ActivityStatusLabel(status: dose.status)
+            MediMateStatusBadge(status: dose.status, compact: true)
 
             Menu {
                 Button {
@@ -236,32 +246,15 @@ private struct ActivityDoseRow: View {
                 if isActionInProgress {
                     ProgressView()
                 } else {
-                    Image(systemName: "ellipsis.circle")
-                        .font(.title3)
+                        Image(systemName: "ellipsis.circle")
+                            .font(.title3)
+                            .foregroundStyle(MediMateTheme.accent)
+                    }
                 }
-            }
             .disabled(isActionInProgress)
             .accessibilityLabel("Correct record")
         }
         .accessibilityElement(children: .combine)
-    }
-}
-
-private struct ActivityStatusLabel: View {
-    let status: DoseStatus
-
-    var body: some View {
-        Label {
-            Text(ActivityFormatter.status(status))
-                .font(.caption.weight(.semibold))
-        } icon: {
-            Image(systemName: ActivityFormatter.statusSystemImage(status))
-                .font(.caption)
-        }
-        .foregroundStyle(ActivityFormatter.statusColor(status))
-        .labelStyle(.titleAndIcon)
-        .fixedSize(horizontal: true, vertical: false)
-        .accessibilityLabel(ActivityFormatter.status(status))
     }
 }
 

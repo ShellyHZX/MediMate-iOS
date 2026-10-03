@@ -18,6 +18,7 @@ struct MedicationListView: View {
             }
         }
         .navigationTitle("Medications")
+        .background(MediMateTheme.background)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink {
@@ -37,13 +38,14 @@ struct MedicationListView: View {
     }
 
     private var medicationList: some View {
-        List {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 20) {
             if let errorMessage = viewModel.errorMessage {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
+                    MediMateSurface(style: .flat) {
+                        VStack(alignment: .leading, spacing: 10) {
                         Text(errorMessage)
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                                .foregroundStyle(MediMateTheme.secondaryText)
 
                         Button("Retry") {
                             Task {
@@ -51,12 +53,11 @@ struct MedicationListView: View {
                             }
                         }
                     }
-                    .padding(.vertical, 4)
                 }
             }
 
             if !viewModel.activeMedications.isEmpty {
-                Section("Active") {
+                    MedicationLibrarySection(title: "Active") {
                     ForEach(viewModel.activeMedications) { medication in
                         NavigationLink {
                             MedicationDetailView(medication: medication) {
@@ -67,12 +68,13 @@ struct MedicationListView: View {
                         } label: {
                             MedicationRowView(medication: medication)
                         }
+                            .buttonStyle(.plain)
                     }
                 }
             }
 
             if !viewModel.inactiveMedications.isEmpty {
-                Section("Inactive") {
+                    MedicationLibrarySection(title: "Inactive") {
                     ForEach(viewModel.inactiveMedications) { medication in
                         NavigationLink {
                             MedicationDetailView(medication: medication) {
@@ -83,10 +85,15 @@ struct MedicationListView: View {
                         } label: {
                             MedicationRowView(medication: medication)
                         }
+                            .buttonStyle(.plain)
                     }
                 }
             }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
+        .background(MediMateTheme.background)
         .overlay(alignment: .top) {
             if viewModel.isLoading {
                 ProgressView()
@@ -97,31 +104,40 @@ struct MedicationListView: View {
     }
 
     private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No medications yet", systemImage: "pills")
-        } description: {
-            Text("Add your medications to keep track of when each dose is due.")
-        } actions: {
-            NavigationLink("Add Medication") {
+        MediMateEmptyState(
+            title: "No medications yet",
+            message: "Add a medication to start your routine.",
+            systemImage: "pills",
+            actionTitle: "Add Medication",
+            action: nil
+        )
+        .overlay(alignment: .bottom) {
+            NavigationLink {
                 addMedicationForm
+            } label: {
+                Text("Add Medication")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .tint(MediMateTheme.accent)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 34)
         }
     }
 
     private func errorState(message: String) -> some View {
-        ContentUnavailableView {
-            Label("Unable to load medications", systemImage: "exclamationmark.circle")
-        } description: {
-            Text(message)
-        } actions: {
-            Button("Retry") {
+        MediMateEmptyState(
+            title: "Unable to load medications",
+            message: message,
+            systemImage: "exclamationmark.circle",
+            actionTitle: "Retry",
+            action: {
                 Task {
                     await viewModel.retry()
                 }
             }
-            .buttonStyle(.borderedProminent)
-        }
+        )
     }
 
     private var addMedicationForm: some View {
@@ -141,33 +157,66 @@ struct MedicationListView: View {
     }
 }
 
+private struct MedicationLibrarySection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(MediMateTheme.primaryText)
+                .accessibilityAddTraits(.isHeader)
+
+            MediMateSurface(style: .standard) {
+                VStack(spacing: 0) {
+                    content
+                }
+            }
+        }
+    }
+}
+
 private struct MedicationRowView: View {
     let medication: Medication
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(medication.name)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
+        HStack(spacing: 14) {
+            MedicationGlyph(seed: medication.name, isActive: medication.isActive)
 
-                if !medication.isActive {
-                    Text("Inactive")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(medication.name)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(medication.isActive ? MediMateTheme.primaryText : MediMateTheme.secondaryText)
+
+                    if !medication.isActive {
+                        Text("Inactive")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(MediMateTheme.secondaryText)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.secondary.opacity(0.12), in: Capsule())
+                    }
                 }
+
+                Text(MedicationPresentationFormatter.dosage(medication.dosage))
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(medication.isActive ? MediMateTheme.primaryText : MediMateTheme.secondaryText)
+
+                Text(MedicationPresentationFormatter.doseTimes(medication.schedule.dailyDoseTimes))
+                    .font(.subheadline)
+                    .foregroundStyle(MediMateTheme.secondaryText)
+                    .lineLimit(2)
             }
 
-            Text(MedicationPresentationFormatter.dosage(medication.dosage))
-                .font(.subheadline)
-                .foregroundStyle(.primary)
+            Spacer(minLength: 10)
 
-            Text(MedicationPresentationFormatter.doseTimes(medication.schedule.dailyDoseTimes))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(MediMateTheme.secondaryText)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 12)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
     }

@@ -29,5 +29,6 @@ struct MainTabView: View {
                 Label("Activity", systemImage: "clock.badge.checkmark")
             }
         }
+        .tint(MediMateTheme.accent)
     }
 }

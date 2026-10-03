@@ -24,16 +24,21 @@ struct MedicationFormView: View {
     }
 
     var body: some View {
-        Form {
-            medicationSection
-            dosageSection
-            scheduleSection
-            instructionsSection
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 18) {
+                medicationSection
+                dosageSection
+                scheduleSection
+                instructionsSection
 
-            if viewModel.isDeactivationAvailable || viewModel.isDeletionAvailable {
-                managementSection
+                if viewModel.isDeactivationAvailable || viewModel.isDeletionAvailable {
+                    managementSection
+                }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
+        .background(MediMateTheme.background)
         .navigationTitle(viewModel.isAddMode ? "Add Medication" : "Edit Medication")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
@@ -99,42 +104,49 @@ struct MedicationFormView: View {
     }
 
     private var medicationSection: some View {
-        Section("Medication") {
-            TextField("Name", text: $viewModel.name)
-                .textContentType(.name)
+        FormSection(title: "Medication") {
+            LabeledInput(title: "Name") {
+                TextField("Medication name", text: $viewModel.name)
+                    .textContentType(.name)
+                    .textFieldStyle(.plain)
+            }
         }
     }
 
     private var dosageSection: some View {
-        Section("Dosage") {
-            TextField("Amount", text: $viewModel.dosageAmountText)
-                .keyboardType(.decimalPad)
+        FormSection(title: "Dosage") {
+            LabeledInput(title: "Amount") {
+                TextField("Amount", text: $viewModel.dosageAmountText)
+                    .keyboardType(.decimalPad)
+                    .textFieldStyle(.plain)
+            }
 
-            Picker("Unit", selection: $viewModel.dosageUnit) {
-                ForEach(DosageUnit.allCases, id: \.self) { unit in
-                    Text(unit.rawValue)
-                        .tag(unit)
+            LabeledInput(title: "Unit") {
+                Picker("Unit", selection: $viewModel.dosageUnit) {
+                    ForEach(DosageUnit.allCases, id: \.self) { unit in
+                        Text(unit.rawValue)
+                            .tag(unit)
+                    }
                 }
+                .pickerStyle(.menu)
             }
         }
     }
 
     private var scheduleSection: some View {
-        Section {
-            LabeledContent("Repeats", value: "Every day")
+        FormSection(title: "Schedule") {
+            FormValueRow(title: "Repeats", value: "Every day")
 
             if viewModel.dailyDoseTimes.isEmpty {
                 Text("Add at least one dose time.")
-                    .foregroundStyle(.secondary)
+                    .font(.body)
+                    .foregroundStyle(MediMateTheme.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 8)
                     .accessibilityLabel("Add at least one dose time")
             } else {
                 ForEach(viewModel.dailyDoseTimes.indices, id: \.self) { index in
                     doseTimeRow(index: index)
-                }
-                .onDelete { offsets in
-                    for index in offsets.sorted(by: >) {
-                        viewModel.removeDoseTime(at: index)
-                    }
                 }
             }
 
@@ -142,30 +154,36 @@ struct MedicationFormView: View {
                 addDefaultDoseTime()
             } label: {
                 Label("Add Time", systemImage: "plus")
+                    .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .tint(MediMateTheme.accent)
+            .padding(.top, 4)
             .accessibilityLabel("Add dose time")
-        } header: {
-            Text("Schedule")
         }
     }
 
     private var instructionsSection: some View {
-        Section("Instructions") {
-            TextField("Optional instructions", text: $viewModel.instructions, axis: .vertical)
-                .lineLimit(2...5)
+        FormSection(title: "Instructions") {
+            LabeledInput(title: "Optional notes") {
+                TextField("Optional instructions", text: $viewModel.instructions, axis: .vertical)
+                    .lineLimit(2...5)
+                    .textFieldStyle(.plain)
+            }
         }
     }
 
     private var managementSection: some View {
-        Section {
+        FormSection(title: "Manage Medication") {
             if viewModel.isDeactivationAvailable {
-                Button(role: .destructive) {
+                Button {
                     isShowingDeactivationConfirmation = true
                 } label: {
-                    Text("Deactivate Medication")
+                    Label("Deactivate Medication", systemImage: "pause.circle")
+                        .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
                 }
+                .tint(MediMateTheme.accent)
                 .disabled(viewModel.isSaving)
                 .accessibilityLabel("Deactivate Medication")
             }
@@ -174,37 +192,43 @@ struct MedicationFormView: View {
                 Button(role: .destructive) {
                     isShowingDeletionConfirmation = true
                 } label: {
-                    Text("Delete Medication")
+                    Label("Delete Medication", systemImage: "trash")
+                        .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
                 }
+                .tint(.red)
                 .disabled(viewModel.isSaving)
                 .accessibilityLabel("Delete Medication")
 
                 Text("Only medications without recorded dose history can be permanently deleted.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(MediMateTheme.secondaryText)
             }
-        } header: {
-            Text("Manage Medication")
         }
     }
 
     private func doseTimeRow(index: Int) -> some View {
-        DatePicker(
-            "Dose Time",
-            selection: doseTimeBinding(for: index),
-            displayedComponents: .hourAndMinute
-        )
-        .accessibilityLabel("Dose time \(index + 1)")
-        .swipeActions {
+        HStack(spacing: 12) {
+            DatePicker(
+                "Dose Time",
+                selection: doseTimeBinding(for: index),
+                displayedComponents: .hourAndMinute
+            )
+            .labelsHidden()
+            .accessibilityLabel("Dose time \(index + 1)")
+
+            Spacer(minLength: 8)
+
             Button(role: .destructive) {
                 viewModel.removeDoseTime(at: index)
             } label: {
-                Label("Remove", systemImage: "trash")
+                Image(systemName: "trash")
+                    .font(.body.weight(.semibold))
             }
             .accessibilityLabel("Remove dose time \(index + 1)")
         }
+        .padding(12)
+        .background(MediMateTheme.elevatedSurface, in: RoundedRectangle(cornerRadius: MediMateTheme.compactCornerRadius))
     }
 
     private func doseTimeBinding(for index: Int) -> Binding<Date> {
@@ -267,5 +291,69 @@ struct MedicationFormView: View {
 
     private func presentErrorIfNeeded() {
         isShowingError = viewModel.errorMessage != nil
+    }
+}
+
+private struct FormSection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title.uppercased())
+                .font(.caption.weight(.bold))
+                .foregroundStyle(MediMateTheme.secondaryText)
+                .accessibilityAddTraits(.isHeader)
+
+            MediMateSurface(style: .standard) {
+                VStack(alignment: .leading, spacing: 14) {
+                    content
+                }
+            }
+        }
+    }
+}
+
+private struct LabeledInput<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(MediMateTheme.secondaryText)
+
+            content
+                .font(.body)
+                .foregroundStyle(MediMateTheme.primaryText)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(MediMateTheme.elevatedSurface, in: RoundedRectangle(cornerRadius: MediMateTheme.compactCornerRadius))
+                .overlay {
+                    RoundedRectangle(cornerRadius: MediMateTheme.compactCornerRadius)
+                        .stroke(MediMateTheme.border, lineWidth: 1)
+                }
+        }
+    }
+}
+
+private struct FormValueRow: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.body.weight(.medium))
+                .foregroundStyle(MediMateTheme.primaryText)
+
+            Spacer()
+
+            Text(value)
+                .font(.body)
+                .foregroundStyle(MediMateTheme.secondaryText)
+        }
+        .padding(.vertical, 4)
     }
 }
