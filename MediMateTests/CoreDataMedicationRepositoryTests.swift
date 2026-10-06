@@ -3,6 +3,8 @@ import Foundation
 import Testing
 @testable import MediMate
 
+@MainActor
+@Suite(.serialized)
 struct CoreDataMedicationRepositoryTests {
     @Test func saveAndFetchByIDRoundTripsMedication() async throws {
         let environment = makeEnvironment()

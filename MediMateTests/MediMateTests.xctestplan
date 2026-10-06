@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "1861971B-761E-4B9A-B05E-F6BD97AA2F6A",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:MediMate.xcodeproj",
+        "identifier" : "3F7107C1306DF5AB00CF5420",
+        "name" : "MediMateTests"
+      }
+    }
+  ],
+  "version" : 1
+}

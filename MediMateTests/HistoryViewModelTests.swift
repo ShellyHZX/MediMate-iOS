@@ -71,7 +71,7 @@ struct HistoryViewModelTests {
         await viewModel.loadHistory()
 
         #expect(viewModel.doses == [dose])
-        #expect(viewModel.errorMessage == "We couldn't load your medication history. Please try again.")
+        #expect(viewModel.errorMessage == "We couldn't load your activity. Please try again.")
         #expect(!viewModel.isLoading)
     }
 
